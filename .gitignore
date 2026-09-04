@@ -1,0 +1,9 @@
+# Build output — regenerate with build-artifact.ps1
+dist/
+
+# OS / editor cruft
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+*.log

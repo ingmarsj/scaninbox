@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="ScanInbox savieno tavu skeneri vai daudzfunkciju printeri ar inbox.lv pastu. Nospied «Skenēt» — dokuments jau ir tavā e-pastā.">
+<!-- ARTIFACT:BEGIN -->
+<title>ScanInbox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* ============================================================
+   ScanInbox — tokens
+   ============================================================ */
+:root{
+  --paper:#F7F9FB;
+  --surface:#FFFFFF;
+  --surface-2:#EDF1F5;
+  --ink:#0C1620;
+  --ink-2:#3C4C5C;
+  --ink-3:#69798A;
+  --rule:#DCE4EC;
+  --rule-strong:#C3D0DB;
+  --azure:#1668D8;
+  --azure-ink:#0F4FA8;
+  --azure-soft:#E4EEFC;
+  --lamp:#12C8A8;
+  --lamp-glow:rgba(18,200,168,.30);
+  --flag:#8A5A22;
+  --flag-soft:#FBF0E2;
+  --shadow:0 1px 2px rgba(12,22,32,.05), 0 12px 32px -12px rgba(12,22,32,.18);
+  --on-azure:#FFFFFF;
+
+  --fs-display:clamp(2.35rem,5.4vw,4.05rem);
+  --fs-h2:clamp(1.55rem,2.9vw,2.3rem);
+  --fs-h3:1.0625rem;
+  --fs-body:1.0625rem;
+  --fs-sm:.9375rem;
+  --fs-xs:.8125rem;
+
+  --display:"Archivo","Segoe UI",Arial,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+
+  --gutter:clamp(1.15rem,4vw,2.5rem);
+  --wrap:1140px;
+  --section-y:clamp(3.75rem,8vw,6.75rem);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0A1219;
+    --surface:#101C26;
+    --surface-2:#16242F;
+    --ink:#EAF1F7;
+    --ink-2:#A8BAC8;
+    --ink-3:#7B8C9B;
+    --rule:#22333F;
+    --rule-strong:#314655;
+    --azure:#5AA2F7;
+    --azure-ink:#8FC0FA;
+    --azure-soft:#122840;
+    --lamp:#2CE0BE;
+    --lamp-glow:rgba(44,224,190,.26);
+    --flag:#DDA772;
+    --flag-soft:#241B10;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 16px 40px -14px rgba(0,0,0,.7);
+    --on-azure:#04121F;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0A1219;
+  --surface:#101C26;
+  --surface-2:#16242F;
+  --ink:#EAF1F7;
+  --ink-2:#A8BAC8;
+  --ink-3:#7B8C9B;
+  --rule:#22333F;
+  --rule-strong:#314655;
+  --azure:#5AA2F7;
+  --azure-ink:#8FC0FA;
+  --azure-soft:#122840;
+  --lamp:#2CE0BE;
+  --lamp-glow:rgba(44,224,190,.26);
+  --flag:#DDA772;
+  --flag-soft:#241B10;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 16px 40px -14px rgba(0,0,0,.7);
+  --on-azure:#04121F;
+}
+
+/* ============================================================
+   base
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+/* Author `display` declarations outrank the UA rule for [hidden], so state it
+   here once — otherwise .done and the form stay visible when hidden is set. */
+[hidden]{display:none !important}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:var(--fs-body);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;display:block}
+h1,h2,h3,h4{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.08;letter-spacing:-.015em}
+p{margin:0}
+a{color:var(--azure);text-decoration-thickness:1px;text-underline-offset:.18em}
+:focus-visible{outline:2px solid var(--azure);outline-offset:3px;border-radius:2px}
+::selection{background:var(--lamp-glow)}
+
+.wrap{width:100%;max-width:var(--wrap);margin-inline:auto;padding-inline:var(--gutter)}
+.measure{max-width:63ch}
+.eyebrow{
+  font-family:var(--mono);font-size:var(--fs-xs);font-weight:500;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);
+}
+.lede{font-size:clamp(1.06rem,1.7vw,1.25rem);color:var(--ink-2);line-height:1.58}
+
+/* ============================================================
+   header
+   ============================================================ */
+.masthead{
+  position:sticky;top:0;z-index:50;
+  background:var(--paper);
+  background:color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--rule);
+}
+.masthead__in{display:flex;align-items:center;gap:1.25rem;min-height:64px}
+.brand{display:flex;align-items:center;gap:.6rem;font-family:var(--display);font-weight:700;font-size:1.075rem;letter-spacing:-.02em;color:var(--ink);text-decoration:none}
+.brand__glyph{
+  width:26px;height:26px;flex:none;border-radius:5px;
+  background:var(--ink);position:relative;overflow:hidden;
+}
+.brand__glyph::before{content:"";position:absolute;inset:5px 4px auto 4px;height:2px;border-radius:2px;background:var(--lamp);box-shadow:0 0 8px var(--lamp)}
+.brand__glyph::after{content:"";position:absolute;inset:auto 4px 5px 4px;height:9px;border-radius:2px;background:var(--paper);opacity:.85}
+.brand small{font-family:var(--mono);font-weight:400;font-size:.6875rem;color:var(--ink-3);letter-spacing:.04em;align-self:flex-end;padding-bottom:.18rem}
+.nav{display:none;gap:1.6rem;align-items:center}
+.nav a{color:var(--ink-2);text-decoration:none;font-size:var(--fs-sm)}
+.nav a:hover{color:var(--ink)}
+.masthead__tools{display:flex;align-items:center;gap:.4rem;margin-inline-start:auto}
+@media (min-width:900px){
+  .nav{display:flex;margin-inline-start:auto}
+  .masthead__tools{margin-inline-start:1.5rem}
+}
+
+.iconbtn{
+  display:inline-flex;align-items:center;justify-content:center;gap:.3rem;
+  height:34px;min-width:34px;padding:0 .55rem;
+  border:1px solid var(--rule);border-radius:7px;
+  background:transparent;color:var(--ink-2);
+  font-family:var(--mono);font-size:var(--fs-xs);font-weight:500;letter-spacing:.04em;
+  cursor:pointer;
+}
+.iconbtn:hover{border-color:var(--rule-strong);color:var(--ink)}
+.iconbtn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
+  font-family:var(--body);font-size:var(--fs-sm);font-weight:600;
+  padding:.72rem 1.15rem;border-radius:8px;border:1px solid transparent;
+  cursor:pointer;text-decoration:none;transition:transform .12s ease, background-color .12s ease;
+}
+.btn--primary{background:var(--azure);color:var(--on-azure)}
+.btn--primary:hover{background:var(--azure-ink)}
+.btn--primary:active{transform:translateY(1px)}
+.btn--ghost{background:transparent;color:var(--ink);border-color:var(--rule-strong)}
+.btn--ghost:hover{background:var(--surface-2)}
+.btn--sm{padding:.5rem .85rem;font-size:var(--fs-xs)}
+.masthead .btn{display:none}
+@media (min-width:640px){ .masthead .btn{display:inline-flex} }
+
+/* ============================================================
+   hero
+   ============================================================ */
+.hero{padding-block:clamp(2.75rem,6vw,5rem) var(--section-y);overflow:hidden}
+.hero__grid{display:grid;gap:clamp(2.5rem,5vw,3.5rem);align-items:center}
+@media (min-width:960px){ .hero__grid{grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr)} }
+.hero__copy{display:flex;flex-direction:column;gap:1.4rem;align-items:flex-start}
+.hero h1{font-size:var(--fs-display);font-weight:700;letter-spacing:-.032em;max-width:19ch}
+.hero h1 em{font-style:normal;color:var(--azure)}
+.hero__actions{display:flex;flex-wrap:wrap;gap:.7rem}
+.hero__note{display:flex;flex-wrap:wrap;gap:.5rem .9rem;font-family:var(--mono);font-size:var(--fs-xs);color:var(--ink-3)}
+.hero__note span{display:inline-flex;align-items:center;gap:.4rem}
+.hero__note span::before{content:"";width:4px;height:4px;border-radius:50%;background:var(--lamp)}
+
+/* --- scanner graphic --- */
+.rig{display:flex;flex-direction:column;gap:.9rem;align-items:stretch}
+.scanner{
+  position:relative;border-radius:14px;padding:.85rem;
+  background:linear-gradient(180deg,var(--surface) 0%,var(--surface-2) 100%);
+  border:1px solid var(--rule);box-shadow:var(--shadow);
+}
+.scanner__lid{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 .3rem .8rem;font-family:var(--mono);font-size:var(--fs-xs);
+  color:var(--ink-3);letter-spacing:.06em;
+}
+.scanner__lid b{display:inline-flex;align-items:center;gap:.4rem;font-weight:500;color:var(--ink-2)}
+.led{width:6px;height:6px;border-radius:50%;background:var(--lamp);box-shadow:0 0 7px var(--lamp);animation:led 2.6s ease-in-out infinite}
+@keyframes led{0%,100%{opacity:1}50%{opacity:.35}}
+
+.bed{
+  position:relative;border-radius:8px;overflow:hidden;
+  background:var(--ink);
+  padding:1.15rem;
+  aspect-ratio:1.34;
+  display:flex;
+}
+/* A4 guide marks etched at the glass edge, like a real flatbed */
+.bed__marks{position:absolute;inset:0;pointer-events:none;font-family:var(--mono);font-size:.625rem;letter-spacing:.1em;color:rgba(255,255,255,.34)}
+.bed__marks span{position:absolute}
+.bed__marks span:nth-child(1){top:.42rem;left:.5rem}
+.bed__marks span:nth-child(2){bottom:.42rem;right:.5rem}
+.bed__marks span:nth-child(3){top:.42rem;right:.5rem}
+.bed__marks::before,.bed__marks::after{content:"";position:absolute;background:rgba(255,255,255,.22)}
+.bed__marks::before{top:0;left:1.15rem;width:1px;height:.7rem}
+.bed__marks::after{bottom:0;left:1.15rem;width:1px;height:.7rem}
+
+.sheet{
+  position:relative;flex:1;border-radius:3px;
+  background:#FCFCFA;
+  padding:1.15rem 1.25rem;
+  display:flex;flex-direction:column;gap:.62rem;
+  box-shadow:0 6px 18px -8px rgba(0,0,0,.55);
+}
+.sheet__head{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;padding-bottom:.55rem;border-bottom:1px solid #E2E6E9}
+.sheet__title{font-family:var(--display);font-weight:700;font-size:.8125rem;color:#141C24;letter-spacing:-.01em}
+.sheet__meta{font-family:var(--mono);font-size:.5625rem;color:#8C98A3;letter-spacing:.06em}
+.sheet__lines{display:flex;flex-direction:column;gap:.42rem}
+.ln{height:5px;border-radius:2px;background:#CFD7DE}
+.ln--80{width:80%}.ln--96{width:96%}.ln--62{width:62%}.ln--90{width:90%}.ln--44{width:44%}
+.sheet__stamp{
+  margin-top:auto;align-self:flex-start;
+  font-family:var(--mono);font-size:.5625rem;letter-spacing:.09em;
+  color:#1668D8;border:1px solid #B9D3F5;background:#F0F6FE;
+  padding:.16rem .38rem;border-radius:3px;
+}
+/* sweeping lamp — the page rests on a fully scanned sheet; the beam only adds life */
+.beam{
+  position:absolute;top:0;bottom:0;width:16%;pointer-events:none;
+  background:linear-gradient(90deg,transparent,var(--lamp-glow) 42%,rgba(255,255,255,.5) 50%,var(--lamp-glow) 58%,transparent);
+  mix-blend-mode:screen;
+  animation:sweep 4.6s cubic-bezier(.5,0,.5,1) infinite;
+}
+.beam::after{content:"";position:absolute;inset:0 auto 0 50%;width:2px;transform:translateX(-1px);background:var(--lamp);box-shadow:0 0 14px 3px var(--lamp-glow)}
+@keyframes sweep{
+  0%{left:-16%} 46%{left:100%} 54%{left:100%} 96%{left:-16%} 100%{left:-16%}
+}
+
+/* --- delivered mail card --- */
+.delivery{
+  display:flex;align-items:center;gap:.85rem;
+  padding:.8rem .95rem;border-radius:11px;
+  background:var(--surface);border:1px solid var(--rule);box-shadow:var(--shadow);
+}
+.delivery__icon{
+  position:relative;flex:none;width:38px;height:38px;border-radius:9px;
+  background:var(--azure-soft);color:var(--azure);
+  display:grid;place-items:center;
+}
+.delivery__icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7}
+.delivery__icon i{
+  position:absolute;top:-5px;right:-5px;width:17px;height:17px;border-radius:50%;
+  background:var(--lamp);color:#04241E;
+  font-family:var(--mono);font-style:normal;font-size:.625rem;font-weight:500;
+  display:grid;place-items:center;
+  box-shadow:0 0 0 3px var(--surface);
+  animation:ping 4.6s ease-in-out infinite;
+}
+@keyframes ping{0%,62%,100%{transform:scale(1)}70%{transform:scale(1.28)}78%{transform:scale(1)}}
+.delivery__txt{display:flex;flex-direction:column;min-width:0}
+.delivery__from{display:block;font-size:var(--fs-sm);font-weight:600;letter-spacing:-.005em}
+.delivery__sub{display:block;font-family:var(--mono);font-size:var(--fs-xs);color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.delivery__size{margin-inline-start:auto;flex:none;font-family:var(--mono);font-size:var(--fs-xs);color:var(--ink-3)}
+
+@media (prefers-reduced-motion: reduce){
+  .beam{animation:none;left:38%}
+  .led,.delivery__icon i{animation:none}
+}
+
+/* ============================================================
+   sections
+   ============================================================ */
+.band{padding-block:var(--section-y);border-top:1px solid var(--rule)}
+.band--tint{background:var(--surface-2)}
+.band__head{display:flex;flex-direction:column;gap:.85rem;margin-bottom:clamp(2rem,4vw,3rem)}
+.band__head h2{font-size:var(--fs-h2);font-weight:700;letter-spacing:-.025em;max-width:26ch}
+
+/* today: a plain hairline list, deliberately not cards */
+.today{display:flex;flex-direction:column;border-top:1px solid var(--rule)}
+.today__row{display:grid;gap:.15rem .9rem;padding:1.05rem 0;border-bottom:1px solid var(--rule)}
+@media (min-width:720px){ .today__row{grid-template-columns:auto minmax(0,1fr);align-items:baseline} }
+.today__k{font-family:var(--mono);font-size:var(--fs-xs);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);min-width:9.5rem}
+.today__v{color:var(--ink-2)}
+.today__turn{
+  margin-top:1.6rem;display:flex;gap:.85rem;align-items:flex-start;
+  font-size:clamp(1.06rem,1.7vw,1.2rem);color:var(--ink);max-width:52ch;
+}
+.today__turn::before{content:"";flex:none;width:3px;align-self:stretch;border-radius:2px;background:var(--lamp)}
+
+/* steps — numbering is earned: this is a real sequence */
+.steps{display:flex;flex-direction:column;counter-reset:s}
+.step{
+  position:relative;display:grid;gap:.35rem 1.35rem;
+  padding:0 0 2.1rem 3.1rem;
+}
+.step:last-child{padding-bottom:0}
+@media (min-width:760px){
+  .step{grid-template-columns:minmax(0,15rem) minmax(0,1fr);gap:.35rem 2.5rem;padding-left:3.4rem}
+}
+.step__n{
+  position:absolute;left:0;top:-.1rem;
+  width:2rem;height:2rem;border-radius:50%;
+  display:grid;place-items:center;
+  font-family:var(--mono);font-size:var(--fs-xs);font-weight:500;
+  color:var(--azure);background:var(--surface);border:1px solid var(--rule-strong);
+}
+.step::before{
+  content:"";position:absolute;left:1rem;top:2.1rem;bottom:.35rem;width:1px;
+  background:linear-gradient(180deg,var(--rule-strong),var(--rule));
+}
+.step:last-child::before{display:none}
+.step h3{font-size:var(--fs-h3);font-weight:600;letter-spacing:-.01em}
+.step p{color:var(--ink-2);font-size:var(--fs-sm);max-width:56ch}
+.step__chip{
+  display:inline-flex;align-items:center;gap:.35rem;margin-top:.5rem;
+  justify-self:start;
+  font-family:var(--mono);font-size:.6875rem;letter-spacing:.06em;
+  color:var(--ink-2);background:var(--surface);border:1px solid var(--rule);
+  padding:.2rem .45rem;border-radius:4px;
+}
+@media (min-width:760px){ .step__chip{grid-column:2} }
+
+/* the SMTP card — the one lifted object on the page */
+.smtp{
+  margin-top:clamp(2.25rem,4vw,3rem);
+  border-radius:12px;overflow:hidden;
+  background:var(--surface);border:1px solid var(--rule-strong);box-shadow:var(--shadow);
+}
+.smtp__bar{
+  display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;
+  padding:.7rem 1.05rem;border-bottom:1px solid var(--rule);background:var(--surface-2);
+}
+.smtp__bar strong{font-family:var(--mono);font-size:var(--fs-xs);font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.smtp__bar span{margin-inline-start:auto;font-family:var(--mono);font-size:var(--fs-xs);color:var(--ink-3)}
+.smtp__body{overflow-x:auto}
+.smtp table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
+.smtp th,.smtp td{text-align:left;padding:.6rem 1.05rem;border-bottom:1px solid var(--rule);white-space:nowrap}
+.smtp tr:last-child th,.smtp tr:last-child td{border-bottom:0}
+.smtp th{font-weight:400;color:var(--ink-3);width:14rem;letter-spacing:.02em}
+.smtp td{color:var(--ink);font-weight:500}
+.smtp td u{text-decoration:none;color:var(--lamp)}
+
+/* features */
+.grid3{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+@media (min-width:640px){ .grid3{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (min-width:980px){ .grid3{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.cell{background:var(--surface);padding:1.35rem 1.3rem;display:flex;flex-direction:column;gap:.5rem}
+.cell__top{display:flex;align-items:center;gap:.6rem}
+.cell svg{width:18px;height:18px;flex:none;fill:none;stroke:var(--azure);stroke-width:1.7}
+.cell h3{font-size:var(--fs-h3);font-weight:600;letter-spacing:-.01em}
+.cell p{color:var(--ink-2);font-size:var(--fs-sm)}
+.flag{
+  align-self:flex-start;margin-top:.15rem;
+  font-family:var(--mono);font-size:.6875rem;letter-spacing:.06em;
+  color:var(--flag);background:var(--flag-soft);border:1px solid color-mix(in srgb,var(--flag) 28%,transparent);
+  padding:.14rem .4rem;border-radius:4px;
+}
+
+/* price */
+.price{display:grid;gap:clamp(1.75rem,4vw,3rem);align-items:start}
+@media (min-width:860px){ .price{grid-template-columns:auto minmax(0,1fr)} }
+.price__tag{display:flex;align-items:baseline;gap:.5rem;font-family:var(--mono);color:var(--ink)}
+.price__q{font-family:var(--display);font-weight:700;font-size:clamp(3.5rem,9vw,5.5rem);line-height:.85;letter-spacing:-.04em;color:var(--azure)}
+.price__unit{font-size:var(--fs-sm);color:var(--ink-3);max-width:9rem;line-height:1.35}
+.price__body{display:flex;flex-direction:column;gap:1rem}
+.price__body p{color:var(--ink-2)}
+
+/* form */
+.signup{padding-block:var(--section-y);border-top:1px solid var(--rule);background:var(--surface-2)}
+.signup__grid{display:grid;gap:clamp(2rem,4vw,3.5rem)}
+@media (min-width:960px){ .signup__grid{grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr)} }
+.signup__aside{display:flex;flex-direction:column;gap:1rem}
+.signup__aside h2{font-size:var(--fs-h2);font-weight:700;letter-spacing:-.025em}
+.signup__aside p{color:var(--ink-2)}
+.trust{display:flex;flex-direction:column;gap:.55rem;margin-top:.35rem;padding-top:1.1rem;border-top:1px solid var(--rule)}
+.trust li{display:flex;gap:.55rem;align-items:flex-start;font-size:var(--fs-sm);color:var(--ink-2)}
+.trust{list-style:none;padding-left:0}
+.trust svg{width:15px;height:15px;flex:none;margin-top:.28rem;fill:none;stroke:var(--lamp);stroke-width:2}
+
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:clamp(1.25rem,3vw,1.9rem);box-shadow:var(--shadow)}
+form{display:flex;flex-direction:column;gap:1.05rem}
+.f2{display:grid;gap:1.05rem}
+@media (min-width:560px){ .f2{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.field{display:flex;flex-direction:column;gap:.35rem;min-width:0}
+.field label{font-family:var(--mono);font-size:var(--fs-xs);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.field label b{color:var(--azure);font-weight:400}
+.field input,.field select{
+  font-family:var(--body);font-size:var(--fs-sm);color:var(--ink);
+  background:var(--paper);border:1px solid var(--rule-strong);border-radius:7px;
+  padding:.62rem .7rem;width:100%;
+}
+.field select{appearance:none;background-image:linear-gradient(45deg,transparent 49%,var(--ink-3) 50%),linear-gradient(-45deg,transparent 49%,var(--ink-3) 50%);background-size:6px 6px,6px 6px;background-position:right 1rem center,right .65rem center;background-repeat:no-repeat;padding-right:2.1rem}
+.field input::placeholder{color:var(--ink-3)}
+.field input:focus,.field select:focus{border-color:var(--azure);outline:none;box-shadow:0 0 0 3px var(--azure-soft)}
+.field__hint{font-size:var(--fs-xs);color:var(--ink-3)}
+.check{display:flex;gap:.6rem;align-items:flex-start;font-size:var(--fs-sm);color:var(--ink-2);cursor:pointer}
+.check input{margin:.28rem 0 0;accent-color:var(--azure);width:16px;height:16px;flex:none}
+.formfoot{display:flex;flex-direction:column;gap:.7rem;padding-top:.35rem}
+.formfoot .btn{align-self:flex-start}
+.formfoot .btn[disabled]{opacity:.6;cursor:progress}
+.legal{font-size:var(--fs-xs);color:var(--ink-3);max-width:52ch}
+.formmsg{font-size:var(--fs-sm);padding:.7rem .85rem;border-radius:7px;border:1px solid var(--rule-strong);background:var(--paper);color:var(--ink-2)}
+.formmsg[hidden]{display:none}
+.formmsg--bad{border-color:color-mix(in srgb,var(--flag) 45%,transparent);background:var(--flag-soft);color:var(--flag)}
+
+.done{display:flex;flex-direction:column;gap:.9rem;align-items:flex-start}
+.done__mark{width:40px;height:40px;border-radius:50%;background:var(--azure-soft);display:grid;place-items:center}
+.done__mark svg{width:20px;height:20px;fill:none;stroke:var(--azure);stroke-width:2.2}
+.done h3{font-family:var(--display);font-size:1.45rem;font-weight:700;letter-spacing:-.02em}
+.done p{color:var(--ink-2);font-size:var(--fs-sm);max-width:46ch}
+.done code{font-family:var(--mono);font-size:.9em;background:var(--surface-2);padding:.1rem .3rem;border-radius:4px;color:var(--ink)}
+
+/* faq */
+.faq{display:grid;gap:1px;background:var(--rule);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+@media (min-width:820px){ .faq{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.qa{background:var(--paper);padding:1.4rem .2rem 1.4rem 0}
+@media (min-width:820px){ .qa{padding:1.4rem 1.6rem 1.4rem 0} }
+.qa h3{font-size:var(--fs-h3);font-weight:600;margin-bottom:.4rem;letter-spacing:-.01em}
+.qa p{color:var(--ink-2);font-size:var(--fs-sm);max-width:52ch}
+
+/* footer */
+.foot{border-top:1px solid var(--rule);padding-block:2.5rem 3rem;background:var(--paper)}
+.foot__in{display:flex;flex-wrap:wrap;gap:1.25rem 2rem;align-items:flex-start;justify-content:space-between}
+.foot p{font-size:var(--fs-sm);color:var(--ink-2)}
+.foot .disclaimer{font-family:var(--mono);font-size:var(--fs-xs);color:var(--ink-3);max-width:44ch;line-height:1.5}
+.skip{position:absolute;left:-9999px}
+.skip:focus{left:1rem;top:.6rem;z-index:100;background:var(--surface);color:var(--ink);padding:.5rem .8rem;border-radius:6px;border:1px solid var(--rule-strong)}
+</style>
+<!-- ARTIFACT:SPLIT -->
+</head>
+<body>
+<a class="skip" href="#pieteikties" data-en="Skip to the sign-up form">Pāriet uz pieteikuma formu</a>
+
+<header class="masthead">
+  <div class="wrap masthead__in">
+    <a class="brand" href="#top"><span class="brand__glyph" aria-hidden="true"></span>ScanInbox <small>by inbox.lv</small></a>
+    <nav class="nav" aria-label="Sadaļas">
+      <a href="#ka-strada" data-en="How it works">Kā strādā</a>
+      <a href="#ko-sanem" data-en="What you get">Ko saņem</a>
+      <a href="#cena" data-en="Price">Cena</a>
+      <a href="#biezi" data-en="FAQ">BUJ</a>
+    </nav>
+    <div class="masthead__tools">
+      <button class="iconbtn" id="lang" type="button" aria-label="Switch to English">EN</button>
+      <button class="iconbtn" id="theme" type="button" aria-label="Mainīt gaišo/tumšo režīmu" data-en-aria="Toggle light/dark mode">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"/></svg>
+      </button>
+      <a class="btn btn--primary btn--sm" href="#pieteikties" data-en="Join the waitlist">Pieteikties</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <div class="wrap hero__grid">
+      <div class="hero__copy">
+        <p class="eyebrow" data-en="A new inbox.lv service · in development">Jauns inbox.lv pakalpojums · izstrādē</p>
+        <h1 data-en="Press &laquo;Scan&raquo;. The document is already <em>in your inbox</em>.">Nospied «Skenēt». Dokuments jau ir <em>tavā e-pastā</em>.</h1>
+        <p class="lede measure" data-en="ScanInbox connects your scanner or multifunction printer to inbox.lv mail. No computer, no USB stick, no vendor cloud to trust &mdash; just your device and your mailbox.">ScanInbox savieno tavu skeneri vai daudzfunkciju printeri ar inbox.lv pastu. Bez datora, bez USB zibatmiņas, bez ražotāja mākoņa, kuram jāuzticas — tikai tava ierīce un tava pastkaste.</p>
+        <div class="hero__actions">
+          <a class="btn btn--primary" href="#pieteikties" data-en="Join the first users">Pieteikties pirmajiem</a>
+          <a class="btn btn--ghost" href="#ka-strada" data-en="How it works">Kā tas strādā</a>
+        </div>
+        <p class="hero__note">
+          <span data-en="Free pre-registration">Bezmaksas priekšreģistrācija</span>
+          <span data-en="We write before launch">Sazināsimies pirms palaišanas</span>
+          <span data-en="No commitment">Bez saistībām</span>
+        </p>
+      </div>
+
+      <div class="rig" aria-hidden="true">
+        <div class="scanner">
+          <div class="scanner__lid">
+            <b><span class="led"></span>SCAN TO E-MAIL</b>
+            <span>KYOCERA · TASKALFA</span>
+          </div>
+          <div class="bed">
+            <div class="bed__marks"><span>A4</span><span>300 DPI</span><span>LTR</span></div>
+            <div class="sheet">
+              <div class="sheet__head">
+                <span class="sheet__title">Rēķins Nr. 2026/0412</span>
+                <span class="sheet__meta">04.09.2026</span>
+              </div>
+              <div class="sheet__lines">
+                <span class="ln ln--96"></span><span class="ln ln--80"></span>
+                <span class="ln ln--90"></span><span class="ln ln--62"></span>
+                <span class="ln ln--96"></span><span class="ln ln--44"></span>
+              </div>
+              <span class="sheet__stamp">PDF · 1,8 MB</span>
+            </div>
+            <div class="beam"></div>
+          </div>
+        </div>
+        <div class="delivery">
+          <span class="delivery__icon">
+            <svg viewBox="0 0 24 24"><rect x="2.6" y="5" width="18.8" height="14" rx="2.2"/><path d="M3.2 6.6 12 13l8.8-6.4"/></svg>
+            <i>1</i>
+          </span>
+          <span class="delivery__txt">
+            <span class="delivery__from">Skeneris — Vestibils</span>
+            <span class="delivery__sub">Rekins_2026-0412.pdf</span>
+          </span>
+          <span class="delivery__size">1,8 MB</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TODAY ================= -->
+  <section class="band">
+    <div class="wrap">
+      <div class="band__head">
+        <p class="eyebrow" data-en="The problem">Problēma</p>
+        <h2 data-en="How scanning to e-mail works today">Kā skenēšana uz e-pastu notiek šodien</h2>
+      </div>
+      <div class="today">
+        <div class="today__row">
+          <span class="today__k" data-en="The detour">Apkārtceļš</span>
+          <span class="today__v" data-en="Scan to a USB stick, find the cable, move it to a computer, attach it to an e-mail. Every single time.">Skenē uz USB, meklē vadu, pārnes uz datoru, pieliec e-pastam. Katru reizi no jauna.</span>
+        </div>
+        <div class="today__row">
+          <span class="today__k" data-en="The vendor cloud">Ražotāja mākonis</span>
+          <span class="today__v" data-en="It wants an account, a subscription and a set of terms &mdash; and it keeps your documents on servers you did not choose.">Tas prasa kontu, abonementu un savus noteikumus — un tavus dokumentus glabā serveros, ko neesi izvēlējies.</span>
+        </div>
+        <div class="today__row">
+          <span class="today__k" data-en="The SMTP tab">SMTP sadaļa</span>
+          <span class="today__v" data-en="Empty fields on the device panel, and a 180-page manual that explains the fields but not the values.">Tukši lauki ierīces panelī un 180 lappušu rokasgrāmata, kas paskaidro laukus, bet ne vērtības.</span>
+        </div>
+      </div>
+      <p class="today__turn" data-en="ScanInbox replaces all of it with one SMTP configuration you enter once &mdash; and values we hand you, ready to copy.">ScanInbox aizvieto to visu ar vienu SMTP konfigurāciju, ko ievadi vienreiz — un vērtībām, ko iedodam gatavas pārrakstīšanai.</p>
+    </div>
+  </section>
+
+  <!-- ================= STEPS ================= -->
+  <section class="band band--tint" id="ka-strada">
+    <div class="wrap">
+      <div class="band__head">
+        <p class="eyebrow" data-en="From sign-up to first scan">No reģistrācijas līdz pirmajam skenējumam</p>
+        <h2 data-en="Five steps, once">Pieci soļi, vienu reizi</h2>
+      </div>
+
+      <div class="steps">
+        <article class="step">
+          <span class="step__n">01</span>
+          <h3 data-en="Create an account">Izveido kontu</h3>
+          <p data-en="Register with your e-mail, or sign in with the inbox.lv account you already have.">Reģistrējies ar e-pastu vai pieslēdzies ar inbox.lv kontu, kas tev jau ir.</p>
+        </article>
+        <article class="step">
+          <span class="step__n">02</span>
+          <h3 data-en="Add your device">Pievieno savu ierīci</h3>
+          <p data-en="Name your scanner or printer in the portal &mdash; &laquo;Reception&raquo;, &laquo;3rd floor&raquo;, &laquo;Accounting&raquo;. Each device gets its own SMTP credentials.">Portālā nosauc savu skeneri vai printeri — «Reģistratūra», «3. stāvs», «Grāmatvedība». Katra ierīce saņem savus SMTP piekļuves datus.</p>
+        </article>
+        <article class="step">
+          <span class="step__n">03</span>
+          <h3 data-en="Type the values into the device">Ievadi datus skenerī</h3>
+          <p data-en="Open &laquo;Scan to E-mail&raquo; on the device and copy across the server, port, user and password. The portal shows exactly what goes in each field.">Ierīcē atver «Scan to E-mail» un pārraksti serveri, portu, lietotāju un paroli. Portālā redzi, kas tieši jāieliek katrā laukā.</p>
+        </article>
+        <article class="step">
+          <span class="step__n">04</span>
+          <h3 data-en="Pay for the device">Apmaksā ierīci</h3>
+          <p data-en="Card payment through Stripe. You pay per device you have added &mdash; nothing for the ones you have not.">Karšu maksājums caur Stripe. Maksā par katru pievienoto ierīci — par nepievienotajām nemaksā.</p>
+          <span class="step__chip">Stripe</span>
+        </article>
+        <article class="step">
+          <span class="step__n">05</span>
+          <h3 data-en="Scan">Skenē</h3>
+          <p data-en="You get a confirmation e-mail that the payment went through, and from that moment every scan lands in the mailbox you chose.">Saņem e-pastu, ka maksājums ir apstrādāts, un no tā brīža katrs skenējums nonāk tavā izvēlētajā pastkastē.</p>
+        </article>
+      </div>
+
+      <div class="smtp">
+        <div class="smtp__bar">
+          <strong data-en="Device credentials">Ierīces piekļuves dati</strong>
+          <span data-en="Example &mdash; the portal shows the exact values per device">Piemērs — precīzās vērtības katrai ierīcei redzēsi portālā</span>
+        </div>
+        <div class="smtp__body">
+          <table>
+            <tbody>
+              <tr><th data-en="Server">Serveris</th><td>mail.inbox.lv</td></tr>
+              <tr><th data-en="Port">Ports</th><td>465 <u>SSL/TLS</u> · 587 <u>STARTTLS</u></td></tr>
+              <tr><th data-en="Authentication">Autentifikācija</th><td data-en="On">Ieslēgta</td></tr>
+              <tr><th data-en="User">Lietotājs</th><td>dev-7f3a-vestibils</td></tr>
+              <tr><th data-en="Sender address">Sūtītāja adrese</th><td>vestibils@scaninbox.lv</td></tr>
+              <tr><th data-en="Attachment format">Pielikuma formāts</th><td>PDF · A4 · 300 dpi</td></tr>
+              <tr><th data-en="Max attachment">Maks. pielikums</th><td>20 MB</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FEATURES ================= -->
+  <section class="band" id="ko-sanem">
+    <div class="wrap">
+      <div class="band__head">
+        <p class="eyebrow" data-en="What you get">Ko saņem</p>
+        <h2 data-en="Built on infrastructure that already carries Latvia&rsquo;s mail">Uzbūvēts uz infrastruktūras, kas jau nes Latvijas pastu</h2>
+      </div>
+      <div class="grid3">
+        <div class="cell">
+          <div class="cell__top">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="10.5" width="17" height="10" rx="2"/><path d="M7.5 10.5V7.2a4.5 4.5 0 0 1 9 0v3.3"/></svg>
+            <h3 data-en="Separate credentials per device">Katrai ierīcei savi dati</h3>
+          </div>
+          <p data-en="Every scanner gets its own user and password. Revoke one and the rest keep working &mdash; no shared mailbox password on a machine in the hallway.">Katrs skeneris saņem savu lietotāju un paroli. Vienu atslēdz, pārējie strādā tālāk — nekādas kopīgas pastkastes paroles uz iekārtas gaitenī.</p>
+        </div>
+        <div class="cell">
+          <div class="cell__top">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2 4.8 6.1v5.6c0 4.3 2.9 7.6 7.2 9.1 4.3-1.5 7.2-4.8 7.2-9.1V6.1z"/></svg>
+            <h3 data-en="Documents stay in Latvia">Dokumenti paliek Latvijā</h3>
+          </div>
+          <p data-en="Mail and attachments live in inbox.lv infrastructure in Latvia, under GDPR &mdash; not on a vendor&rsquo;s servers on another continent.">Pasts un pielikumi glabājas inbox.lv infrastruktūrā Latvijā, saskaņā ar VDAR — nevis ražotāja serveros citā kontinentā.</p>
+        </div>
+        <div class="cell">
+          <div class="cell__top">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.4" y="8.6" width="17.2" height="8.4" rx="1.8"/><path d="M7.2 8.6V4.4h9.6v4.2M7.2 17v2.8h9.6V17"/></svg>
+            <h3 data-en="Works with the device you own">Strādā ar tavu esošo ierīci</h3>
+          </div>
+          <p data-en="Any scanner or MFP with a &laquo;Scan to E-mail&raquo; function: Canon, HP, Kyocera, Xerox, Brother, Ricoh, Konica Minolta.">Jebkurš skeneris vai MFP ar «Scan to E-mail» funkciju: Canon, HP, Kyocera, Xerox, Brother, Ricoh, Konica Minolta.</p>
+        </div>
+        <div class="cell">
+          <div class="cell__top">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h9"/></svg>
+            <h3 data-en="No vendor account">Bez ražotāja konta</h3>
+          </div>
+          <p data-en="Nothing to register with the printer manufacturer, no terms of theirs to accept, no subscription that expires with a firmware update.">Nav jāreģistrējas pie printera ražotāja, nav jāpieņem tā noteikumi un nav abonementa, kas beidzas ar programmatūras atjauninājumu.</p>
+        </div>
+        <div class="cell">
+          <div class="cell__top">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7.4v5.2l3.4 2"/><circle cx="12" cy="12" r="8.4"/></svg>
+            <h3 data-en="Scan log">Skenējumu žurnāls</h3>
+          </div>
+          <p data-en="See in the portal what each device sent and when &mdash; useful when a document never arrived and nobody remembers pressing the button.">Portālā redzi, ko un kad katra ierīce nosūtīja — noder, kad dokuments nav atnācis un neviens neatceras, vai nospieda pogu.</p>
+          <span class="flag" data-en="planned">plānots</span>
+        </div>
+        <div class="cell">
+          <div class="cell__top">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h11.5M4 12h16M4 16.5h11.5"/><path d="M17.5 5.5 20.5 7.5l-3 2M17.5 14.5l3 2-3 2"/></svg>
+            <h3 data-en="Several recipients">Vairāki saņēmēji</h3>
+          </div>
+          <p data-en="Send the same scan to accounting, to the archive and to yourself at once, without retyping addresses on the device keypad.">Sūti vienu skenējumu grāmatvedībai, arhīvam un sev vienlaikus, nepārrakstot adreses uz ierīces tastatūras.</p>
+          <span class="flag" data-en="planned">plānots</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PRICE ================= -->
+  <section class="band band--tint" id="cena">
+    <div class="wrap">
+      <div class="band__head">
+        <p class="eyebrow" data-en="Price">Cena</p>
+        <h2 data-en="There is no price yet, and that is on purpose">Cenas vēl nav, un tas ir apzināti</h2>
+      </div>
+      <div class="price">
+        <div class="price__tag">
+          <span class="price__q">?</span>
+          <span class="price__unit" data-en="&euro; per device, per month">&euro; par ierīci mēnesī</span>
+        </div>
+        <div class="price__body">
+          <p class="measure" data-en="The charge will be per device you add &mdash; one scanner in a home office costs less than eleven of them across a clinic. We have not put a number on it, because we would rather set it with the people who will actually use it.">Maksa būs par katru pievienoto ierīci — viens skeneris mājas birojā nav tas pats, kas vienpadsmit skeneri klīnikā. Skaitli vēl neesam uzlikuši, jo gribam to noteikt kopā ar tiem, kas pakalpojumu tiešām lietos.</p>
+          <p class="measure" data-en="Tell us in the form what it would be worth to you. That answer decides whether we build this at all.">Formā pasaki, cik tas tev būtu vērts. Šī atbilde izšķir, vai mēs to vispār būvējam.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SIGN UP ================= -->
+  <section class="signup" id="pieteikties">
+    <div class="wrap signup__grid">
+      <div class="signup__aside">
+        <p class="eyebrow" data-en="Pre-registration">Priekšreģistrācija</p>
+        <h2 data-en="Join the first users">Pieteikties pirmajiem lietotājiem</h2>
+        <p data-en="Leave your e-mail and we will reach out when ScanInbox is ready to test. The other fields tell us what to build first &mdash; they are all optional.">Atstāj e-pastu, un mēs uzrunāsim tevi, kad ScanInbox būs gatavs testēšanai. Pārējie lauki pasaka, ko būvēt vispirms — tie visi ir neobligāti.</p>
+        <ul class="trust">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-en="We write about ScanInbox only &mdash; no newsletter, no ads.">Rakstīsim tikai par ScanInbox — bez ziņu vēstulēm un reklāmas.</span></li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-en="We do not pass your address on to anyone.">Tavu adresi nevienam tālāk nenododam.</span></li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-en="One reply and you are off the list for good.">Viena atbilde, un esi no saraksta ārā uz labu.</span></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <form id="lead" novalidate>
+          <div class="f2">
+            <div class="field">
+              <label for="email" data-en="E-mail <b>*</b>">E-pasts <b>*</b></label>
+              <input id="email" name="email" type="email" required autocomplete="email" placeholder="vards@inbox.lv" data-en-ph="name@inbox.lv">
+            </div>
+            <div class="field">
+              <label for="name" data-en="Name">Vārds</label>
+              <input id="name" name="name" type="text" autocomplete="name" placeholder="Neobligāti" data-en-ph="Optional">
+            </div>
+          </div>
+
+          <div class="f2">
+            <div class="field">
+              <label for="segment" data-en="Who would use it">Kas to lietotu</label>
+              <select id="segment" name="segment">
+                <option value="" data-en="Choose&hellip;">Izvēlies…</option>
+                <option value="private" data-en="Myself, at home">Es pats, mājās</option>
+                <option value="small" data-en="Small business (up to 10 people)">Mazs uzņēmums (līdz 10 cilvēkiem)</option>
+                <option value="medium" data-en="Company (10&ndash;100 people)">Uzņēmums (10&ndash;100 cilvēku)</option>
+                <option value="large" data-en="Large company or public institution">Liels uzņēmums vai valsts iestāde</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="devices" data-en="How many devices">Cik ierīču</label>
+              <select id="devices" name="devices">
+                <option value="" data-en="Choose&hellip;">Izvēlies…</option>
+                <option value="1">1</option>
+                <option value="2-5">2&ndash;5</option>
+                <option value="6-20">6&ndash;20</option>
+                <option value="20+">20+</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="f2">
+            <div class="field">
+              <label for="model" data-en="Scanner or printer model">Skenera vai printera modelis</label>
+              <input id="model" name="model" type="text" placeholder="Piem. Canon MF445dw" data-en-ph="e.g. Canon MF445dw">
+              <span class="field__hint" data-en="Helps us know which devices to support first.">Palīdz saprast, kuras ierīces atbalstīt vispirms.</span>
+            </div>
+            <div class="field">
+              <label for="price" data-en="Worth per device, per month">Vērtība par ierīci mēnesī</label>
+              <select id="price" name="price">
+                <option value="" data-en="Choose&hellip;">Izvēlies…</option>
+                <option value="lt2" data-en="Under &euro;2">Zem 2 &euro;</option>
+                <option value="2-5">2&ndash;5 &euro;</option>
+                <option value="5-10">5&ndash;10 &euro;</option>
+                <option value="10+" data-en="Over &euro;10">Vairāk par 10 &euro;</option>
+                <option value="unsure" data-en="Cannot say yet">Vēl nevaru pateikt</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="check">
+            <input type="checkbox" id="beta" name="beta">
+            <span data-en="I would like to test ScanInbox before launch">Vēlos testēt ScanInbox pirms palaišanas</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" id="consent" name="consent" required>
+            <span data-en="I agree that inbox.lv may contact me about ScanInbox. <b>*</b>">Piekrītu, ka inbox.lv drīkst ar mani sazināties par ScanInbox. <b>*</b></span>
+          </label>
+
+          <div class="formfoot">
+            <p class="formmsg" id="msg" role="status" hidden></p>
+            <button class="btn btn--primary" id="submit" type="submit" data-en="Join the waitlist">Pieteikties</button>
+            <p class="legal" data-en="We store your e-mail and the answers above for one purpose: to contact you about ScanInbox and decide what to build. Nothing else.">Tavu e-pastu un augstākminētās atbildes glabājam vienam mērķim: lai sazinātos par ScanInbox un izlemtu, ko būvēt. Nekam citam.</p>
+          </div>
+        </form>
+
+        <div class="done" id="done" hidden>
+          <span class="done__mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+          <h3 data-en="Thank you &mdash; you are on the list">Paldies — esi sarakstā</h3>
+          <p data-en="We will write to <code id='done-mail2'></code> as soon as there is something to show. If you want to add anything, just reply to that mail.">Rakstīsim uz <code id="done-mail"></code>, tiklīdz būs ko parādīt. Ja gribi kaut ko piebilst, vienkārši atbildi uz to vēstuli.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FAQ ================= -->
+  <section class="band" id="biezi">
+    <div class="wrap">
+      <div class="band__head">
+        <p class="eyebrow" data-en="FAQ">Biežāk uzdotie jautājumi</p>
+        <h2 data-en="Before you ask">Pirms pajautā</h2>
+      </div>
+      <div class="faq">
+        <div class="qa">
+          <h3 data-en="Do I need a new scanner?">Vai man jāpērk jauns skeneris?</h3>
+          <p data-en="No. All you need is a &laquo;Scan to E-mail&raquo; or SMTP section in the device settings. Most office machines from the last fifteen years have one.">Nē. Vajadzīga tikai «Scan to E-mail» vai SMTP sadaļa ierīces iestatījumos. Lielākajai daļai biroja iekārtu pēdējos piecpadsmit gados tā ir.</p>
+        </div>
+        <div class="qa">
+          <h3 data-en="Do I need an inbox.lv mailbox?">Vai vajag inbox.lv pastkasti?</h3>
+          <p data-en="You can receive scans at any address, including Gmail or a work domain. Sending goes through inbox.lv SMTP, which we provide &mdash; that part is our side of the deal.">Saņemt skenējumus vari jebkurā adresē, arī Gmail vai darba domēnā. Sūtīšana notiek caur inbox.lv SMTP, ko nodrošinām mēs — tā ir mūsu puse.</p>
+        </div>
+        <div class="qa">
+          <h3 data-en="What happens to my documents?">Kas notiek ar maniem dokumentiem?</h3>
+          <p data-en="They travel over an encrypted connection from the device to the inbox.lv server and on to the address you set. We do not open them and we do not analyse them.">Tie ceļo pa šifrētu savienojumu no ierīces uz inbox.lv serveri un tālāk uz tavu norādīto adresi. Mēs tos neatveram un neanalizējam.</p>
+        </div>
+        <div class="qa">
+          <h3 data-en="How many devices can I add?">Cik ierīces var pievienot?</h3>
+          <p data-en="As many as you need. Each device is a separate line in your account with its own credentials and its own charge.">Cik nepieciešams. Katra ierīce ir atsevišķa pozīcija kontā ar saviem piekļuves datiem un savu maksu.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__in">
+    <p data-en="<strong>ScanInbox</strong> &mdash; an inbox.lv service in development."><strong>ScanInbox</strong> — inbox.lv pakalpojums izstrādē.</p>
+    <p class="disclaimer" data-en="This page exists to find out whether the product is wanted. The service is not available yet and nothing here can be purchased.">Šī lapa pastāv, lai noskaidrotu, vai produkts ir vajadzīgs. Pakalpojums vēl nav pieejams, un neko šeit nevar iegādāties.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Where leads go when this page is self-hosted.
+        Set to your own API path (e.g. "/api/leads") on inbox.lv infrastructure.
+        Inside a Claude Artifact the `db` capability is used instead. ---------- */
+  var LEADS_ENDPOINT = "";
+
+  var store = (window.claude && typeof window.claude.use === "function")
+    ? window.claude.use("db").catch(function () { return null; })
+    : Promise.resolve(null);
+
+  /* ---------------- theme ---------------- */
+  var root = document.documentElement;
+  var themeBtn = document.getElementById("theme");
+  try {
+    var saved = localStorage.getItem("scaninbox.theme");
+    if (saved === "dark" || saved === "light") root.setAttribute("data-theme", saved);
+  } catch (e) {}
+
+  themeBtn.addEventListener("click", function () {
+    var isDark = root.getAttribute("data-theme") === "dark" ||
+      (!root.hasAttribute("data-theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var next = isDark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("scaninbox.theme", next); } catch (e) {}
+  });
+
+  /* ---------------- language ----------------
+     Latvian is written into the markup, so the page reads correctly with no
+     JS at all. English lives in data-en / data-en-ph / data-en-aria and is
+     swapped in on request. ---------------- */
+  var langBtn = document.getElementById("lang");
+  var lang = "lv";
+  var signedUpAs = "";
+
+  function collect(attr) {
+    return Array.prototype.slice.call(document.querySelectorAll("[" + attr + "]"));
+  }
+
+  var texts = collect("data-en").map(function (el) {
+    return { el: el, en: el.getAttribute("data-en"), lv: el.innerHTML };
+  });
+  var holders = collect("data-en-ph").map(function (el) {
+    return { el: el, en: el.getAttribute("data-en-ph"), lv: el.getAttribute("placeholder") };
+  });
+  var labels = collect("data-en-aria").map(function (el) {
+    return { el: el, en: el.getAttribute("data-en-aria"), lv: el.getAttribute("aria-label") };
+  });
+
+  function setLang(next) {
+    lang = next === "en" ? "en" : "lv";
+    var en = lang === "en";
+    texts.forEach(function (t) { t.el.innerHTML = en ? t.en : t.lv; });
+    holders.forEach(function (h) { h.el.setAttribute("placeholder", en ? h.en : h.lv); });
+    labels.forEach(function (l) { l.el.setAttribute("aria-label", en ? l.en : l.lv); });
+    root.setAttribute("lang", lang);
+    if (signedUpAs) showAddress(signedUpAs);
+    langBtn.textContent = en ? "LV" : "EN";
+    langBtn.setAttribute("aria-label", en ? "Pārslēgt uz latviešu valodu" : "Switch to English");
+    try { localStorage.setItem("scaninbox.lang", lang); } catch (e) {}
+  }
+
+  langBtn.addEventListener("click", function () { setLang(lang === "en" ? "lv" : "en"); });
+  try { if (localStorage.getItem("scaninbox.lang") === "en") setLang("en"); } catch (e) {}
+
+  /* ---------------- lead form ---------------- */
+  var form = document.getElementById("lead");
+  var msg = document.getElementById("msg");
+  var btn = document.getElementById("submit");
+  var done = document.getElementById("done");
+
+  var COPY = {
+    invalidEmail: { lv: "Ievadi derīgu e-pasta adresi.", en: "Enter a valid e-mail address." },
+    needConsent:  { lv: "Lai pieteiktos, jāatzīmē piekrišana saziņai.", en: "Tick the consent box to sign up." },
+    sending:      { lv: "Sūta…", en: "Sending…" },
+    submit:       { lv: "Pieteikties", en: "Join the waitlist" },
+    noBackend:    { lv: "Forma vēl nav pieslēgta serverim. Iestati LEADS_ENDPOINT.", en: "The form is not connected to a server yet. Set LEADS_ENDPOINT." },
+    busy:         { lv: "Pārāk daudz pieprasījumu. Pamēģini pēc mirkļa.", en: "Too many requests. Try again in a moment." },
+    full:         { lv: "Pieteikumu saraksts ir pilns. Rakstīsim par to komandai.", en: "The sign-up list is full. We will flag this to the team." },
+    failed:       { lv: "Neizdevās nosūtīt. Pamēģini vēlreiz.", en: "Could not send. Please try again." }
+  };
+
+  /* The thank-you line carries the address inside a <code> slot, and swapping
+     language rewrites that markup — so re-fill it whenever either changes. */
+  function showAddress(email) {
+    var slot = document.getElementById("done-mail") || document.getElementById("done-mail2");
+    if (slot) slot.textContent = email;
+  }
+
+  function say(key, bad) {
+    msg.textContent = COPY[key][lang];
+    msg.classList.toggle("formmsg--bad", !!bad);
+    msg.hidden = false;
+  }
+
+  form.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+
+    var email = form.email.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      say("invalidEmail", true); form.email.focus(); return;
+    }
+    if (!form.consent.checked) { say("needConsent", true); form.consent.focus(); return; }
+
+    var lead = {
+      email: email,
+      name: form.name.value.trim(),
+      segment: form.segment.value,
+      devices: form.devices.value,
+      model: form.model.value.trim(),
+      priceBand: form.price.value,
+      wantsBeta: form.beta.checked,
+      lang: lang,
+      createdAt: new Date().toISOString()
+    };
+
+    btn.disabled = true;
+    msg.classList.remove("formmsg--bad");
+    say("sending");
+
+    save(lead).then(function () {
+      signedUpAs = email;
+      showAddress(email);
+      form.hidden = true;
+      msg.hidden = true;
+      done.hidden = false;
+      done.setAttribute("tabindex", "-1");
+      done.focus();
+    }).catch(function (err) {
+      btn.disabled = false;
+      var code = err && err.code;
+      if (code === "resource_exhausted") say("busy", true);
+      else if (code === "quota_exceeded") say("full", true);
+      else if (code === "no_backend") say("noBackend", true);
+      else say("failed", true);
+    });
+  });
+
+  function save(lead) {
+    return store.then(function (db) {
+      if (db) return db.collection("leads").add(lead);
+      if (LEADS_ENDPOINT) {
+        return fetch(LEADS_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(lead)
+        }).then(function (r) { if (!r.ok) throw { code: "http_" + r.status }; });
+      }
+      throw { code: "no_backend" };
+    });
+  }
+})();
+</script>
+<!-- ARTIFACT:END -->
+</body>
+</html>
