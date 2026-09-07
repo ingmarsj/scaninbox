@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "scaninbox",
-      "runtimeExecutable": "powershell",
-      "runtimeArgs": ["-ExecutionPolicy", "Bypass", "-File", "serve.ps1"],
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server.js"],
       "port": 8123
     }
   ]

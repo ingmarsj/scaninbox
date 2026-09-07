@@ -1,9 +1,13 @@
-# Build output — regenerate with build-artifact.ps1
+# SQLite datubāze un tās WAL/SHM pavadfaili — dati, ne kods
+data/
+
+# Build izvade — atjauno ar build-artifact.ps1
 dist/
 
-# OS / editor cruft
+# OS / editor
 Thumbs.db
 desktop.ini
 .DS_Store
 .vscode/
+node_modules/
 *.log

@@ -280,18 +280,20 @@ b,strong{font-weight:600}
 .sect__grid{display:grid;gap:1.6rem}
 @media (min-width:980px){ .sect__grid{grid-template-columns:8.5rem minmax(0,1fr);gap:0 3.75rem} }
 .rail{
-  font-family:var(--mono);font-size:var(--fs-mono);letter-spacing:.13em;
-  text-transform:uppercase;color:var(--ink-3);
-  padding-top:.3rem;
+  font-family:var(--mono);font-size:.8125rem;font-weight:500;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--ink);
+  padding-top:.25rem;
 }
-.rail::after{content:"";display:block;width:1.6rem;height:1px;background:var(--rule-2);margin-top:.6rem}
+/* A solid accent bar rather than a grey hairline. The section label has to be
+   findable at a glance and has to outrank the grey column headers below it. */
+.rail::before{content:"";display:block;width:2.25rem;height:3px;background:var(--blue);margin-bottom:.75rem}
 @media (min-width:980px){ .rail{position:sticky;top:5rem;align-self:start} }
 .col{display:flex;flex-direction:column;gap:1.35rem;min-width:0}
 .col h2{font-size:var(--fs-h2);font-weight:600;max-width:24ch}
 .col > p{color:var(--ink-2)}
 
 /* ---------------------------------------------------- comparison table --- */
-.cmp__scroll{overflow-x:auto;border-top:1px solid var(--rule-2)}
+.cmp__scroll{overflow-x:auto;border-top:2px solid var(--ink)}
 .cmp{width:100%;min-width:34rem;border-collapse:collapse;font-family:var(--sans);font-size:var(--fs-sm)}
 .cmp th,.cmp td{text-align:left;vertical-align:top;padding:.72rem .9rem;border-bottom:1px solid var(--rule)}
 .cmp thead th{
@@ -305,7 +307,7 @@ b,strong{font-weight:600}
 .cmp thead .win{color:var(--ink-2)}
 
 /* ----------------------------------------------------------- the steps --- */
-.steps{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule-2)}
+.steps{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}
 .step{display:grid;gap:.15rem .9rem;grid-template-columns:2.4rem minmax(0,1fr);padding:.95rem 0;border-bottom:1px solid var(--rule)}
 .step__n{font-family:var(--mono);font-size:var(--fs-mono);color:var(--blue);padding-top:.24rem;font-variant-numeric:tabular-nums}
 .step h3{font-family:var(--sans);font-size:var(--fs-h3);font-weight:600}
@@ -327,7 +329,7 @@ b,strong{font-weight:600}
 .cfg__ft{padding:.6rem .95rem;border-top:1px solid var(--device-rule);font-family:var(--mono);font-size:.6875rem;color:var(--device-dim);line-height:1.6}
 
 /* ------------------------------------------------------------- includes --- */
-.specs{margin:0;border-top:1px solid var(--rule-2)}
+.specs{margin:0;border-top:2px solid var(--ink)}
 .specs__row{display:grid;gap:.2rem .9rem;padding:.85rem 0;border-bottom:1px solid var(--rule)}
 @media (min-width:720px){ .specs__row{grid-template-columns:15rem minmax(0,1fr);gap:0 2rem} }
 .specs dt{font-family:var(--sans);font-size:var(--fs-sm);font-weight:600;display:flex;flex-wrap:wrap;align-items:baseline;gap:.45rem}
@@ -356,8 +358,9 @@ b,strong{font-weight:600}
 form{display:flex;flex-direction:column;gap:1.25rem}
 .fset{display:flex;flex-direction:column;gap:.75rem;border:0;margin:0;padding:0}
 .fset__lg{
-  font-family:var(--mono);font-size:var(--fs-mono);letter-spacing:.11em;text-transform:uppercase;
-  color:var(--ink-3);padding:0 0 .1rem;width:100%;border-bottom:1px solid var(--rule);
+  font-family:var(--mono);font-size:var(--fs-mono);font-weight:500;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink);padding:0 0 .35rem;width:100%;
+  border-bottom:2px solid var(--ink);
 }
 .pair{display:grid;gap:.75rem}
 @media (min-width:520px){ .pair{grid-template-columns:repeat(2,minmax(0,1fr))} }
@@ -391,7 +394,7 @@ form{display:flex;flex-direction:column;gap:1.25rem}
 .thanks code{font-family:var(--mono);font-size:.9em;color:var(--ink);background:var(--panel);padding:.05rem .25rem}
 
 /* -------------------------------------------------------------------- faq --- */
-.faq{margin:0;border-top:1px solid var(--rule-2)}
+.faq{margin:0;border-top:2px solid var(--ink)}
 .faq__row{padding:.9rem 0;border-bottom:1px solid var(--rule)}
 @media (min-width:820px){ .faq__row{display:grid;grid-template-columns:19rem minmax(0,1fr);gap:0 2rem} }
 .faq dt{font-family:var(--sans);font-size:var(--fs-sm);font-weight:600;margin-bottom:.2rem}
@@ -781,7 +784,8 @@ form{display:flex;flex-direction:column;gap:1.25rem}
 
           <div class="thanks" id="thanks" hidden>
             <span class="thanks__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 9.5 17 19 7.5"/></svg></span>
-            <h3 data-en="You are on the list">Esi sarakstā</h3>
+            <h3 id="thanks-new" data-en="You are on the list">Esi sarakstā</h3>
+            <h3 id="thanks-upd" data-en="Your answers are updated" hidden>Atbildes atjaunotas</h3>
             <p data-en="We will write to <code id='mail-en'></code> as soon as there is something to show. Anything to add, just reply to that mail.">Rakstīsim uz <code id="mail-lv"></code>, tiklīdz būs ko parādīt. Ja gribi ko piebilst, atbildi uz to vēstuli.</p>
           </div>
         </div>
@@ -839,10 +843,11 @@ form{display:flex;flex-direction:column;gap:1.25rem}
 (function () {
   "use strict";
 
-  /* Where leads go when this page is self-hosted. Point it at your own API
-     (e.g. "/api/leads") on inbox.lv infrastructure. Inside a Claude Artifact
-     the `db` capability is used instead. */
-  var LEADS_ENDPOINT = "";
+  /* Where leads go. server.js answers this path and writes to SQLite; on
+     inbox.lv infrastructure point it at the API there. Inside a Claude
+     Artifact the `db` capability is used instead, since a published page
+     cannot reach a server on your machine. */
+  var LEADS_ENDPOINT = "/api/leads";
 
   var store = (window.claude && typeof window.claude.use === "function")
     ? window.claude.use("db").catch(function () { return null; })
@@ -977,6 +982,7 @@ form{display:flex;flex-direction:column;gap:1.25rem}
       model: form.model.value.trim(),
       priceBand: form.price.value,
       wantsBeta: form.beta.checked,
+      consent: form.consent.checked,
       lang: lang,
       createdAt: new Date().toISOString()
     };
@@ -984,9 +990,13 @@ form{display:flex;flex-direction:column;gap:1.25rem}
     btn.disabled = true;
     say("sending");
 
-    save(lead).then(function () {
+    save(lead).then(function (status) {
       signedUpAs = email;
       showAddress(email);
+      /* Someone signing up a second time gets told their answers changed,
+         not that they joined a list they are already on. */
+      document.getElementById("thanks-new").hidden = status === "updated";
+      document.getElementById("thanks-upd").hidden = status !== "updated";
       form.hidden = true;
       msg.hidden = true;
       thanks.hidden = false;
@@ -1002,15 +1012,24 @@ form{display:flex;flex-direction:column;gap:1.25rem}
     });
   });
 
+  /* Resolves to "created" or "updated". */
   function save(lead) {
     return store.then(function (db) {
-      if (db) return db.collection("leads").add(lead);
+      if (db) {
+        return db.collection("leads").add(lead).then(function () { return "created"; });
+      }
       if (LEADS_ENDPOINT) {
         return fetch(LEADS_ENDPOINT, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(lead)
-        }).then(function (r) { if (!r.ok) throw { code: "http_" + r.status }; });
+        }).then(function (r) {
+          return r.json().then(null, function () { return {}; }).then(function (data) {
+            if (r.ok) return data.status === "updated" ? "updated" : "created";
+            if (r.status === 429) throw { code: "resource_exhausted" };
+            throw { code: "http_" + r.status, server: data.error };
+          });
+        });
       }
       throw { code: "no_backend" };
     });
