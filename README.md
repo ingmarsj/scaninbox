@@ -37,6 +37,7 @@ katrā startā — tā ir idempotenta, tāpēc migrācijas nav vajadzīgas.
 | `server.js` | Statiskā lapa + pieteikumu API. Bez atkarībām. |
 | `db/schema.sql` | Datubāzes shēma, uzmeklēšanas tabulas un skati. |
 | `leads.js` | Pieteikumu atskaite terminālī. |
+| `test/` | Testi. `node --test`. |
 | `build-artifact.ps1` | Ģenerē `dist/artifact.html` priekšskatīšanai kā Claude Artifact. |
 | `data/` | SQLite datubāze. **Nav git repozitorijā** — tie ir dati, ne kods. |
 
@@ -108,18 +109,42 @@ nenonāk.
 
 ## Kur nonāk pieteikumi
 
-`index.html` skripta sākumā ir `LEADS_ENDPOINT`, pēc noklusējuma
-`/api/leads`. Forma meklē backend divās vietās:
+**Tikai SQLite.** `index.html` skripta sākumā ir `LEADS_ENDPOINT`, pēc
+noklusējuma `/api/leads`. Rezerves glabātavas nav — ja lapa nevar sasniegt šo
+galapunktu, tā to **pasaka**, nevis klusi noliek datus kaut kur citur.
 
-1. **Claude Artifact `db`** — ja lapa darbojas kā Artifact. Publicētā lapa
-   nevar sasniegt serveri uz tava datora, tāpēc priekšskatījumam ir sava
-   glabātava.
-2. **`LEADS_ENDPOINT`** — `server.js` un SQLite. Uz inbox.lv infrastruktūras
-   norādi to uz reālo API ceļu.
+Uz inbox.lv infrastruktūras norādi `LEADS_ENDPOINT` uz reālo API ceļu.
 
-> Publiskai kampaņai jāizmanto `LEADS_ENDPOINT`, nevis Artifact `db`.
-> Artifact glabātava ir organizācijas iekšēja — katrs, kas var atvērt lapu,
-> var arī nolasīt iesniegtos pieteikumus.
+Praktiskās sekas: lapas kopija, kas tiek pasniegta no cita servera bez šī
+API (piemēram, Claude Artifact priekšskatījums), formā parāda «Šī ir
+priekšskatījuma kopija — pieteikumus tā nesaglabā». Tas ir apzināti: labāk
+skaidrs paziņojums nekā pieteikums, kas nonāk vietā, par kuru neviens nezina.
+
+## Testi
+
+Node iebūvētais testu dzinis, bez atkarībām:
+
+```powershell
+node --test
+```
+
+108 testi trīs failos:
+
+| Fails | Ko sedz |
+| --- | --- |
+| `test/validate.test.js` | e-pasta pārbaude, piekrišana, kodu attīrīšana, garumu griesti, valoda |
+| `test/schema.test.js` | datubāzes ierobežojumi, kaskādes, skatu aritmētika, privātuma garantija |
+| `test/api.test.js` | HTTP statusi, dublikātu apvienošana, pilnvaras vārti, ātruma limits, ceļu aizsardzība |
+
+Katrs tests strādā ar savu pagaidu datubāzi, tāpēc `data/scaninbox.db`
+netiek aiztikta. Serveris tiek celts uz brīva porta, tāpēc testus var palaist,
+kamēr `node server.js` darbojas.
+
+Divi testi ir tur, lai apsargātu apzinātus lēmumus, nevis lai pārbaudītu kodu:
+viens neļauj shēmā parādīties `ip` vai `user_agent` kolonnai, otrs pārbauda, ka
+lapa sūta datus tikai uz vienu galapunktu.
+
+Bash čaulā var norādīt failus tieši: `node --test test/*.test.js`.
 
 ## Pirms publiskas palaišanas
 

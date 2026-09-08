@@ -843,15 +843,12 @@ form{display:flex;flex-direction:column;gap:1.25rem}
 (function () {
   "use strict";
 
-  /* Where leads go. server.js answers this path and writes to SQLite; on
-     inbox.lv infrastructure point it at the API there. Inside a Claude
-     Artifact the `db` capability is used instead, since a published page
-     cannot reach a server on your machine. */
+  /* The only destination for a submission. server.js answers this path and
+     writes to SQLite; on inbox.lv infrastructure point it at the API there.
+     There is no second store and no fallback: a page served from anywhere
+     that cannot reach this endpoint says so rather than quietly keeping the
+     data somewhere else. */
   var LEADS_ENDPOINT = "/api/leads";
-
-  var store = (window.claude && typeof window.claude.use === "function")
-    ? window.claude.use("db").catch(function () { return null; })
-    : Promise.resolve(null);
 
   var root = document.documentElement;
 
@@ -948,7 +945,7 @@ form{display:flex;flex-direction:column;gap:1.25rem}
     badEmail: { lv: "Ievadi derīgu e-pasta adresi.", en: "Enter a valid e-mail address." },
     consent:  { lv: "Lai pieteiktos, jāatzīmē piekrišana saziņai.", en: "Tick the consent box to sign up." },
     sending:  { lv: "Sūta…", en: "Sending…" },
-    noApi:    { lv: "Forma vēl nav pieslēgta serverim.", en: "The form is not connected to a server yet." },
+    noApi:    { lv: "Šī ir priekšskatījuma kopija — pieteikumus tā nesaglabā.", en: "This is a preview copy — it does not store sign-ups." },
     busy:     { lv: "Pārāk daudz pieprasījumu. Pamēģini pēc mirkļa.", en: "Too many requests. Try again in a moment." },
     full:     { lv: "Pieteikumu saraksts ir pilns. Pateiksim par to komandai.", en: "The sign-up list is full. We will flag it to the team." },
     failed:   { lv: "Neizdevās nosūtīt. Pamēģini vēlreiz.", en: "Could not send. Please try again." }
@@ -1014,24 +1011,21 @@ form{display:flex;flex-direction:column;gap:1.25rem}
 
   /* Resolves to "created" or "updated". */
   function save(lead) {
-    return store.then(function (db) {
-      if (db) {
-        return db.collection("leads").add(lead).then(function () { return "created"; });
-      }
-      if (LEADS_ENDPOINT) {
-        return fetch(LEADS_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(lead)
-        }).then(function (r) {
-          return r.json().then(null, function () { return {}; }).then(function (data) {
-            if (r.ok) return data.status === "updated" ? "updated" : "created";
-            if (r.status === 429) throw { code: "resource_exhausted" };
-            throw { code: "http_" + r.status, server: data.error };
-          });
-        });
-      }
-      throw { code: "no_backend" };
+    return fetch(LEADS_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lead)
+    }).then(function (r) {
+      return r.json().then(null, function () { return {}; }).then(function (data) {
+        if (r.ok) return data.status === "updated" ? "updated" : "created";
+        if (r.status === 429) throw { code: "resource_exhausted" };
+        /* No endpoint at this origin — a preview copy of the page, not a
+           transient failure, so don't invite a pointless retry. */
+        if (r.status === 404 || r.status === 405) throw { code: "no_backend" };
+        throw { code: "http_" + r.status, server: data.error };
+      });
+    }, function () {
+      throw { code: "no_backend" };   // network unreachable
     });
   }
 })();
