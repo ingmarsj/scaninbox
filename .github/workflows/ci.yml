@@ -1,0 +1,72 @@
+name: CI
+
+# Testi katrā pushā, un no main zara publicē lapu uz GitHub Pages.
+#
+# Uz Pages aiziet TIKAI index.html. Serveris, testi un shēma tur nenonāk —
+# Pages ir statisks hostings, un mums nav iemesla pasniegt servera kodu kā
+# statiskus failus.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Testi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # node:sqlite bez experimental karoga prasa Node 23.4+
+          node-version: '24'
+
+      - name: node --test
+        run: node --test
+
+  deploy:
+    name: GitHub Pages
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Salikt statisko lapu
+        run: |
+          mkdir -p _site
+          cp index.html _site/index.html
+          # Bez šī Jekyll apstrādātu failus un izlaistu tos, kas sākas ar _
+          touch _site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+        with:
+          # Ieslēdz Pages pats, lai repo iestatījumos nav jāiet ar roku
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
