@@ -8,6 +8,25 @@ paskaidro ideju un savāc priekšreģistrācijas pieteikumus ar signāliem, kas
 mums vajadzīgi lēmumam — segments, ierīču skaits, ierīces modelis un cik
 cilvēks būtu gatavs maksāt.
 
+## Publicētā lapa
+
+<https://ingmarsj.github.io/scaninbox/>
+
+Šo saiti var sūtīt kolēģiem pārskatīšanai. Ņem vērā divas lietas:
+
+- **Forma tur neko nesaglabā.** Pages ir statisks hostings bez API, tāpēc lapa
+  parāda «Šī ir priekšskatījuma kopija — pieteikumus tā nesaglabā». Reālu
+  pieteikumu vākšanai vajag vietu, kur darbojas `server.js`.
+- **Lapa ir publiski sasniedzama** ikvienam, kam ir saite. Piekļuves kontrole
+  Pages lapām ir tikai GitHub Enterprise Cloud. Meklētājos tā nenonāk, jo
+  `index.html` nes `noindex, nofollow` — to noņem pirms palaišanas.
+
+Publicē CI darbplūsma no `main` zara. Uz Pages aiziet tikai `index.html`.
+
+> Pages avots ir jāieslēdz **vienu reizi** ar roku: Settings → Pages →
+> Source: **GitHub Actions**. Darbplūsma to nevar izdarīt pati — noklusējuma
+> `GITHUB_TOKEN` drīkst publicēt uz Pages, bet ne izveidot vietni.
+
 ## Prasības
 
 Node.js 22.5 vai jaunāks. Nekas cits. **Nav npm atkarību** — SQLite nāk no
