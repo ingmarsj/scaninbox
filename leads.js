@@ -4,7 +4,7 @@
  * ScanInbox — pieteikumu atskaite terminālī. Lasa datubāzi tieši, tāpēc
  * serverim nav jādarbojas un pilnvara nav vajadzīga.
  *
- *   node leads.js            → kopsavilkums: cenu joslas, segmenti, iekārtas
+ *   node leads.js            → kopsavilkums: valodas, segmenti, zīmoli, iekārtas
  *   node leads.js --list     → visi pieteikumi
  *   node leads.js --csv      → CSV uz stdout (pārvirzi uz failu)
  */
@@ -66,33 +66,26 @@ if (process.argv.includes('--list')) {
     { title: 'VĀRDS', get: (r) => r.name || '—' },
     { title: 'SEGMENTS', get: (r) => r.segment_lv || '—' },
     { title: 'IERĪCES', get: (r) => r.device_band_lv || '—', right: true },
+    { title: 'ZĪMOLI', get: (r) => r.brands || '—' },
     { title: 'MODELIS', get: (r) => r.device_model || '—' },
-    { title: 'CENA', get: (r) => r.price_band_lv || '—' },
-    { title: 'BETA', get: (r) => (r.wants_beta ? 'jā' : '') },
+    { title: 'VAL.', get: (r) => r.lang.toUpperCase() },
   ]));
   console.log('');
   db.close();
   process.exit(0);
 }
 
-const priced = db.prepare('SELECT COUNT(*) AS n FROM leads WHERE price_band IS NOT NULL').get().n;
-
-console.log('\nGATAVĪBA MAKSĀT\n');
-console.log(table(db.prepare('SELECT * FROM v_price_demand').all(), [
-  { title: 'JOSLA', get: (r) => r.label_lv },
+/* Lapas valoda ir tuvākais, kas mums ir, tirgum: reklāmas kampaņa katrā valstī
+   ved uz savu valodu, tāpēc šī tabula atbild «kur pieprasījums vispār ir». */
+console.log('\nVALODAS\n');
+console.log(table(db.prepare(`
+  SELECT lang, COUNT(*) AS leads,
+         ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM leads), 1) AS pct
+  FROM leads GROUP BY lang ORDER BY leads DESC`).all(), [
+  { title: 'VALODA', get: (r) => r.lang.toUpperCase() },
   { title: 'CILVĒKI', get: (r) => r.leads, right: true },
-  { title: '%', get: (r) => (r.pct === null ? '—' : r.pct), right: true },
+  { title: '%', get: (r) => r.pct, right: true },
 ]));
-
-if (priced) {
-  const arpu = db.prepare(`
-    SELECT ROUND(SUM(p.eur_midpoint) / COUNT(*), 2) AS avg_eur, COUNT(*) AS n
-    FROM leads l JOIN price_bands p ON p.code = l.price_band
-    WHERE p.eur_midpoint IS NOT NULL`).get();
-  if (arpu.n) {
-    console.log(`\n  Vidējā norādītā vērtība: ${arpu.avg_eur} EUR par ierīci mēnesī (${arpu.n} atbildes)`);
-  }
-}
 
 console.log('\nSEGMENTI\n');
 console.log(table(db.prepare('SELECT * FROM v_segment_demand').all(), [
@@ -102,12 +95,35 @@ console.log(table(db.prepare('SELECT * FROM v_segment_demand').all(), [
   { title: 'IERĪCES (MIN)', get: (r) => r.min_devices, right: true },
 ]));
 
-const models = db.prepare('SELECT * FROM v_device_models LIMIT 12').all();
-console.log('\nIEKĀRTAS, KO MINĒJUŠI\n');
-console.log(table(models, [
-  { title: 'MODELIS', get: (r) => r.model },
-  { title: 'REIZES', get: (r) => r.mentions, right: true },
+/* Kuru ražotāju izvēlnes jāapraksta vispirms. Viens cilvēks var atzīmēt
+   vairākus zīmolus, tāpēc procenti ir no tiem, kas uz šo vispār atbildēja. */
+const answeredBrands = db.prepare('SELECT COUNT(DISTINCT lead_id) AS n FROM lead_brands').get().n;
+console.log(`\nZĪMOLI   (${answeredBrands} atbildes)\n`);
+console.log(table(db.prepare('SELECT * FROM v_brand_demand WHERE leads > 0').all(), [
+  { title: 'ZĪMOLS', get: (r) => r.label_lv },
+  { title: 'CILVĒKI', get: (r) => r.leads, right: true },
+  { title: '%', get: (r) => (r.pct === null ? '—' : r.pct), right: true },
 ]));
+
+/* Cenu jautājumu forma vairs neuzdod — tabula paliek vecajiem pieteikumiem. */
+const priced = db.prepare('SELECT COUNT(*) AS n FROM leads WHERE price_band IS NOT NULL').get().n;
+if (priced) {
+  console.log('\nGATAVĪBA MAKSĀT   (vecie pieteikumi)\n');
+  console.log(table(db.prepare('SELECT * FROM v_price_demand WHERE leads > 0').all(), [
+    { title: 'JOSLA', get: (r) => r.label_lv },
+    { title: 'CILVĒKI', get: (r) => r.leads, right: true },
+    { title: '%', get: (r) => (r.pct === null ? '—' : r.pct), right: true },
+  ]));
+}
+
+const models = db.prepare('SELECT * FROM v_device_models LIMIT 12').all();
+if (models.length) {
+  console.log('\nIEKĀRTAS, KO MINĒJUŠI\n');
+  console.log(table(models, [
+    { title: 'MODELIS', get: (r) => r.model },
+    { title: 'REIZES', get: (r) => r.mentions, right: true },
+  ]));
+}
 
 console.log('\n  node leads.js --list   visi pieteikumi');
 console.log('  node leads.js --csv    eksports\n');

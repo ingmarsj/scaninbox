@@ -1,16 +1,42 @@
 # ScanInbox — landing lapa
 
-Produkta idejas validācijas lapa **ScanInbox** — inbox.lv pakalpojumam, kas
-skenētos dokumentus nogādā tieši e-pastā, izmantojot inbox.lv SMTP.
+Produkta idejas validācijas lapa **ScanInbox** — inbox.eu pakalpojumam, kas
+skenētos dokumentus nogādā tieši e-pastā, izmantojot inbox.eu SMTP.
 
 Lapas vienīgais mērķis ir noskaidrot, **vai produkts ir vajadzīgs**: tā
-paskaidro ideju un savāc priekšreģistrācijas pieteikumus ar signāliem, kas
-mums vajadzīgi lēmumam — segments, ierīču skaits, ierīces modelis un cik
-cilvēks būtu gatavs maksāt.
+paskaidro ideju un savāc priekšreģistrācijas pieteikumus. Forma prasa **tikai
+e-pastu**; segmentu, ierīču skaitu un zīmolus jautā uznirstošajā logā pēc tam,
+kad pieteikums jau ir saglabāts.
+
+### Otrā iterācija
+
+Kas mainījies pēc 8. septembra pārskatīšanas ar komandu:
+
+- **Animācija** hero sadaļā tagad izstāsta visu ceļu: lampa pārskrien lapu,
+  vēstule aizlido pa vadu uz norādīto adresi, un skenējums nolaižas iesūtnes
+  saraksta augšgalā. Adrese vadā seko tam, ko cilvēks raksta formā.
+- **Izmestas** sadaļas «Salīdzinājums» un «Kas iekļauts» — pirmā bija gara un
+  neko nepārdeva, otrā tagad dzīvo cenas kartītē un BUJ.
+- **Pievienota** sadaļa «Kurš no šiem esi tu» — četri lietojuma stāsti, starp
+  tiem Microsoft 365 gadījums, kas ir asākais pieprasījuma iemesls.
+- **Laika atskaite** — ~5 min uzstādīšana, < 1 min līdz pastkastei, uz katra
+  soļa savs laiks.
+- **Uzstādīšana** pārtaisīta par četrām kartītēm.
+- **Cena** ir skaitlis: 10 € gadā par ierīci, pirmajiem 10 — gads bez maksas.
+- **BUJ** ir akordeons ar 14 jautājumiem, no kuriem daļa ir tehniska un tur
+  ir SEO dēļ. Divi aizgūti no kolēģu lapām: «Kas ir ScanInbox?» ievadam un
+  «Vai ar to var skenēt arī viesis?».
+- **Piecas valodas**: latviešu, angļu, itāļu, franču, vācu.
 
 ## Publicētā lapa
 
 <https://ingmarsj.github.io/scaninbox/>
+
+Valodu var uzspiest ar `?lang=` — `…/scaninbox/?lang=it`, `?lang=fr`,
+`?lang=de`, `?lang=en`, `?lang=lv`. Tas ir arī veids, kā katra reklāmas
+kampaņa ved uz savu valodu. Bez parametra lapa valodu nosaka pēc apmeklētāja
+atrašanās vietas (laika joslas) un atceras, ko cilvēks izvēlējies pats —
+sīkāk sadaļā «Lapas uzbūve».
 
 Šo saiti var sūtīt kolēģiem pārskatīšanai. Ņem vērā divas lietas:
 
@@ -65,7 +91,7 @@ katrā startā — tā ir idempotenta, tāpēc migrācijas nav vajadzīgas.
 Ātrākais ceļš, bez servera un bez pilnvaras:
 
 ```powershell
-node leads.js           # kopsavilkums: cenu joslas, segmenti, iekārtas
+node leads.js           # kopsavilkums: valodas, segmenti, zīmoli
 node leads.js --list    # visi pieteikumi
 node leads.js --csv     # eksports
 ```
@@ -106,25 +132,44 @@ curl -H "Authorization: Bearer kada-gara-nejauna-virkne" http://localhost:8123/a
 
 `leads` — viena rinda uz e-pastu. Atkārtots pieteikums ar to pašu adresi
 **atjauno atbildes**, nevis rada dublikātu; e-pasts tiek salīdzināts mazajos
-burtos. Lapa tādā gadījumā parāda «Atbildes atjaunotas», nevis «Esi sarakstā».
+burtos.
+
+Tā kā lapa pieraksta cilvēku ar e-pastu vien un pārējo jautā pēc tam, uz
+serveri viens pieteikums aiziet kā **divi pieprasījumi**. Tāpēc atjaunošana
+izmanto `COALESCE`: iesniegums, kas nes mazāk atbilžu, jau saglabātās
+**nenodzēš**. Vienīgais izņēmums ir zīmolu saraksts — ja lauks vispār ir
+klāt, tas aizstāj kopu pilnībā, lai atzīmēto varētu arī noņemt.
 
 `lead_events` — audita pēdas. Katrs iesniegums saglabājas kā saņemtais JSON,
-tāpēc redzams, ja kāds maina atbildi, un var pateikt, vai cena mainījās pēc
-tam, kad cilvēks izlasīja lapu otrreiz.
+tāpēc redzams, ja kāds maina atbildi, un abi soļi paliek atsevišķi.
 
-`segments`, `device_bands`, `price_bands` — uzmeklēšanas tabulas ar etiķetēm
-latviski un angliski. Serveris derīgos kodus lasa no datubāzes, nevis no otras
-kopijas JS pusē, un nezināmu kodu klusi izmet kā `NULL`.
+`lead_brands` — saite starp pieteikumu un zīmoliem. Cilvēkam mēdz būt vairāku
+ražotāju iekārtas, tāpēc tā ir tabula, nevis kolonna.
 
-Skati `v_leads`, `v_price_demand`, `v_segment_demand`, `v_device_models`
-atbild uz lēmuma jautājumiem tieši SQL līmenī.
+`segments`, `device_bands`, `price_bands`, `brands` — uzmeklēšanas tabulas ar
+etiķetēm latviski un angliski. Serveris derīgos kodus lasa no datubāzes, nevis
+no otras kopijas JS pusē, un nezināmu kodu klusi izmet kā `NULL`.
+
+Skati `v_leads`, `v_brand_demand`, `v_segment_demand`, `v_price_demand`,
+`v_device_models` atbild uz lēmuma jautājumiem tieši SQL līmenī. `leads.lang`
+ir tuvākais, kas mums ir, tirgum: katra kampaņa ved uz savu valodu, tāpēc
+valodu sadalījums pasaka, kur pieprasījums vispār ir.
+
+> Cenas jautājumu forma vairs neuzdod, bet `price_bands` un kolonna paliek —
+> tur ir pirmās iterācijas atbildes. `leads.js` to tabulu parāda tikai tad, ja
+> kaut kas tur ir.
+
+**Ja datubāze ir taisīta pirms otrās iterācijas, tā jāizveido no jauna.**
+`lang` kolonnas `CHECK` sarakstu SQLite ar `ALTER TABLE` nemaina, tāpēc vecā
+datubāze noraidītu `it`, `fr` un `de`. Izdzēs `data/scaninbox.db` un palaid
+serveri vēlreiz.
 
 ### Ko datubāzē apzināti NAV
 
 IP adreses un user-agent. Lapa lietotājam apsola glabāt tikai e-pastu un
 formas atbildes, tāpēc neko citu arī neglabājam. IP tiek izmantots tikai
-servera atmiņā ātruma ierobežošanai (5 iesniegumi 10 minūtēs) un nekur
-nenonāk.
+servera atmiņā ātruma ierobežošanai (6 iesniegumi 10 minūtēs — pieteikums un
+aptauja ir divi atsevišķi) un nekur nenonāk.
 
 ## Kur nonāk pieteikumi
 
@@ -132,7 +177,7 @@ nenonāk.
 noklusējuma `/api/leads`. Rezerves glabātavas nav — ja lapa nevar sasniegt šo
 galapunktu, tā to **pasaka**, nevis klusi noliek datus kaut kur citur.
 
-Uz inbox.lv infrastruktūras norādi `LEADS_ENDPOINT` uz reālo API ceļu.
+Uz inbox.eu infrastruktūras norādi `LEADS_ENDPOINT` uz reālo API ceļu.
 
 Praktiskās sekas: lapas kopija, kas tiek pasniegta no cita servera bez šī
 API (piemēram, Claude Artifact priekšskatījums), formā parāda «Šī ir
@@ -147,13 +192,13 @@ Node iebūvētais testu dzinis, bez atkarībām:
 node --test
 ```
 
-108 testi trīs failos:
+127 testi trīs failos:
 
 | Fails | Ko sedz |
 | --- | --- |
-| `test/validate.test.js` | e-pasta pārbaude, piekrišana, kodu attīrīšana, garumu griesti, valoda |
+| `test/validate.test.js` | e-pasta pārbaude, piekrišana, kodu attīrīšana, garumu griesti, valodas, zīmolu saraksts |
 | `test/schema.test.js` | datubāzes ierobežojumi, kaskādes, skatu aritmētika, privātuma garantija |
-| `test/api.test.js` | HTTP statusi, dublikātu apvienošana, pilnvaras vārti, ātruma limits, ceļu aizsardzība |
+| `test/api.test.js` | HTTP statusi, divpakāpju pieteikums, dublikātu apvienošana, pilnvaras vārti, ātruma limits, ceļu aizsardzība |
 
 Katrs tests strādā ar savu pagaidu datubāzi, tāpēc `data/scaninbox.db`
 netiek aiztikta. Serveris tiek celts uz brīva porta, tāpēc testus var palaist,
@@ -170,20 +215,71 @@ Bash čaulā var norādīt failus tieši: `node --test test/*.test.js`.
 - [ ] Uzlikt `SCANINBOX_ADMIN_TOKEN` ar garu nejaušu virkni
 - [ ] Novietot serveri aiz HTTPS (SQLite fails ārpus web saknes)
 - [ ] Pārbaudīt SMTP piemēra vērtības sadaļā «Ierīces piekļuves dati»
-- [ ] Pievienot privātuma politikas saiti pie piekrišanas lauka
-- [ ] Aizvietot `scaninbox.lv` adreses piemērus ar reālajām
+- [ ] Pārskatīt Microsoft SMTP AUTH datumus BUJ 03 un lietojuma stāstā «Microsoft
+      365 bloķē» — Microsoft grafiku jau ir pārcēlis trīs reizes
+- [ ] **Publicēt privātuma paziņojumu un saistīt to pie piekrišanas rūtiņas.**
+      Lapa pie formas tagad pasaka, ko glabā un cik ilgi, bet VDAR 13. pants
+      prasa arī nosaukt pārzini, tiesības un kontaktu. Bez tā palaist nedrīkst.
+- [ ] Apstiprināt, ka 10 € gadā par ierīci ir **ar PVN**. Lapa tā raksta, jo
+      sadaļa «Mājās» uzrunā arī privātpersonas; ja cena ir bez PVN, jālabo
+      `price.unit`, `m4` un `hero.terms` visās piecās valodās
+- [ ] Iedot reālu kontaktadresi. BUJ tagad saka «atbildi uz mūsu vēstuli»,
+      nevis «raksti mums», jo adreses lapā nav
+- [ ] Uztaisīt `og:image` (1200×630) un pievienot to galvenē — pārējie
+      dalīšanās tagi jau ir
+- [ ] Aizvietot `scaninbox.eu` adreses piemērus ar reālajām
+- [ ] Izlasīt visas piecas valodas ar dzīvām acīm — mašīntulkojums ir sākums, ne gals
+- [ ] Apstiprināt cenu 10 € gadā par ierīci un «pirmajiem 10» piedāvājumu
+- [ ] Noņemt `noindex, nofollow` no `index.html`
 - [ ] Iestatīt `data/` dublēšanu
 - [ ] Pievienot analītiku, ja gribam mērīt konversiju
 
 ## Lapas uzbūve
 
-Latviešu teksts ir ierakstīts pašā HTML, angļu — `data-en` atribūtos, ko JS
-apmaina pēc pieprasījuma. Lapa lasāma latviski arī tad, ja JavaScript
-nestrādā.
+Latviešu teksts ir ierakstīts pašā HTML uz elementiem ar `data-i18n="atslēga"`.
+Pārējās četras valodas dzīvo `window.SCANINBOX_I18N` vārdnīcā tā paša faila
+augšgalā, starp `<!-- I18N:BEGIN -->` un `<!-- I18N:END -->`. Latviešu tur nav
+otrreiz — to JS paņem no DOM pirmajā palaišanā. Praktiskās sekas:
+
+- Lapa lasāma latviski arī tad, ja JavaScript nestrādā.
+- Ja kādai valodai atslēga pietrūkst, tā vieta paliek latviski, nevis tukša.
+- Teksta labojums latviski jāizdara HTML **un** visās četrās vārdnīcās.
+
+Izņēmums ir formas paziņojumi («Sūta…», «Ievadi derīgu e-pasta adresi»): tiem
+nav sava elementa, uz kura sēdēt, tāpēc latviešu oriģināli ir `MSG_LV` kartē
+skripta iekšā, bet pārējās valodas — tajā pašā vārdnīcā ar `msg.` priedēkli.
+Otras tulkojumu glabātavas nav.
+
+Valodu izvēlas šādā secībā:
+
+1. `?lang=` parametrs — tur ved reklāmas kampaņas;
+2. paša cilvēka izvēle no slēdža, `localStorage`;
+3. **atrašanās vieta** — laika josla (`Europe/Rome` → itāļu, `Europe/Paris` →
+   franču, `Europe/Berlin` un `Europe/Vienna` → vācu, `Europe/Riga` →
+   latviešu). Valstīs, kur der vairākas mūsu valodas — Šveice, Beļģija,
+   Luksemburga — izšķir pārlūka valoda;
+4. pārlūka valoda;
+5. angļu.
+
+Laika josla ir vienīgais atrašanās vietas signāls, ko lapa var nolasīt **bez
+atļaujas prasīšanas, bez pieprasījuma uz svešu serveri un neaiztiekot IP
+adresi** — pēdējais ir svarīgi, jo pie formas mēs apsolām IP neglabāt. Pārlūks
+Romā ziņo `Europe/Rome` neatkarīgi no tā, kādā valodā ir tā izvēlnes.
+
+`localStorage` glabā **tikai** to valodu, ko cilvēks izvēlējies pats. Ja tur
+liktu arī automātiski noteikto, pirmais minējums iesaldētos uz visiem laikiem
+un lapa vairs nekad nepaskatītos, kur cilvēks atrodas.
 
 Krāsas un tipogrāfija nāk no CSS mainīgajiem `:root` blokā. Tumšais režīms
 pārdefinē tikai mainīgos, tāpēc jaunus komponentus var likt klāt, nedomājot
-par abām tēmām atsevišķi.
+par abām tēmām atsevišķi. `--led` ir lampas zaļais — signālkrāsa punktiem,
+ikonām un apmalēm; tekstam ir `--led-ink`, kas ir pietiekami tumšs, lai to
+varētu izlasīt.
+
+Hero animācija iet pa vienu pulksteni: `--cycle` mainīgais `:root` blokā ir
+visu keyframe animāciju garums, tāpēc takti nevar aizpeldēt viens no otra.
+Ārpus ekrāna animācija apstājas (`IntersectionObserver` uzliek `.is-idle`), un
+ar `prefers-reduced-motion` tā nemaz nesākas — tad redzams beigu stāvoklis.
 
 Vizuālais reģistrs ir biroja tehnikas dokumentācija: blīvas specifikāciju
 tabulas, monospace vērtības, attēlu paraksti un viens tumšs «ierīces»
