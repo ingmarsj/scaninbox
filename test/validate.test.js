@@ -147,10 +147,11 @@ describe('validate() — karodziņi un valoda', () => {
     assert.equal(validate(validLead({ wantsBeta: undefined }), codes).lead.wants_beta, 0);
   });
 
-  test('valoda ir lv vai en, viss cits kļūst lv', () => {
-    assert.equal(validate(validLead({ lang: 'en' }), codes).lead.lang, 'en');
-    assert.equal(validate(validLead({ lang: 'lv' }), codes).lead.lang, 'lv');
-    for (const other of ['de', 'EN', '', undefined, null, 7]) {
+  test('pieņem visas lapas valodas, viss cits kļūst lv', () => {
+    for (const known of ['lv', 'en', 'it', 'fr', 'de']) {
+      assert.equal(validate(validLead({ lang: known }), codes).lead.lang, known);
+    }
+    for (const other of ['ru', 'EN', 'en-GB', '', undefined, null, 7]) {
       assert.equal(validate(validLead({ lang: other }), codes).lead.lang, 'lv');
     }
   });
@@ -169,8 +170,45 @@ describe('validate() — bojāts ķermenis', () => {
     }), codes);
     assert.equal(error, undefined);
     assert.deepEqual(Object.keys(lead).sort(), [
-      'device_band', 'device_model', 'email', 'email_norm', 'lang',
+      'brands', 'device_band', 'device_model', 'email', 'email_norm', 'lang',
       'name', 'price_band', 'segment', 'wants_beta',
     ], 'uz datubāzi aiziet tikai zināmie lauki');
   });
+});
+
+describe('validate() — zīmoli', () => {
+  test('bez lauka paliek null, lai jau atzīmētais netiktu izdzēsts', () => {
+    assert.equal(validate(validLead(), codes).lead.brands, null);
+  });
+
+  test('tukšs masīvs paliek tukšs masīvs — tā ir atbilde «nevienu»', () => {
+    assert.deepEqual(validate(validLead({ brands: [] }), codes).lead.brands, []);
+  });
+
+  test('pieņem zināmus kodus un saglabā tikai tos', () => {
+    const { lead } = validate(validLead({ brands: ['canon', 'hp'] }), codes);
+    assert.deepEqual(lead.brands, ['canon', 'hp']);
+  });
+
+  test('nezināmus kodus klusi izmet', () => {
+    const { lead } = validate(validLead({ brands: ['canon', 'nav-taada', '', null, 7] }), codes);
+    assert.deepEqual(lead.brands, ['canon']);
+  });
+
+  test('dublikātus sapludina', () => {
+    const { lead } = validate(validLead({ brands: ['hp', 'hp', 'hp'] }), codes);
+    assert.deepEqual(lead.brands, ['hp']);
+  });
+
+  test('ierobežo skaitu, lai iesniegums nevarētu uzpūsties', () => {
+    const many = Array.from({ length: 50 }, (_, i) => `zimols-${i}`).concat([...codes.brand]);
+    const { lead } = validate(validLead({ brands: many }), codes);
+    assert.ok(lead.brands.length <= LIMITS.brands);
+  });
+
+  for (const bad of ['canon', 42, {}, null]) {
+    test(`saraksts, kas nav masīvs, ir «lauka nebija»: ${JSON.stringify(bad)}`, () => {
+      assert.equal(validate(validLead({ brands: bad }), codes).lead.brands, null);
+    });
+  }
 });

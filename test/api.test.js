@@ -106,6 +106,91 @@ describe('POST /api/leads', () => {
   });
 });
 
+/* Lapa tagad pieraksta cilvēku ar e-pastu vien, un pārējo jautā pēc tam
+   uznirstošajā logā. Uz serveri tas aiziet kā divi pieprasījumi ar to pašu
+   adresi, tāpēc otrajam nekas nedrīkst pazust. */
+describe('POST /api/leads — divpakāpju pieteikums', () => {
+  let s;
+  const email = 'anna.berzina@inbox.lv';
+  beforeEach(async () => { s = await startApp({ rate: { max: 50 } }); });
+  afterEach(async () => { await s.stop(); });
+
+  const brandsOf = (id) => s.store.db
+    .prepare('SELECT brand FROM lead_brands WHERE lead_id = ? ORDER BY brand').all(id).map((r) => r.brand);
+
+  test('viens e-pasts bez atbildēm ir derīgs pieteikums', async () => {
+    const res = await s.post('/api/leads', { email, consent: true, lang: 'it' });
+    assert.equal(res.status, 201);
+    const row = s.store.db.prepare('SELECT * FROM leads').get();
+    assert.equal(row.email, email);
+    assert.equal(row.segment, null);
+    assert.equal(row.lang, 'it');
+  });
+
+  test('aptaujas atbildes pielīp tam pašam pieteikumam', async () => {
+    await s.post('/api/leads', { email, consent: true, lang: 'lv' });
+    const res = await s.post('/api/leads', {
+      email, consent: true, lang: 'lv',
+      segment: 'small', devices: '2-5', brands: ['canon', 'hp'],
+    });
+
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), { ok: true, id: 1, status: 'updated' });
+    assert.equal(s.store.q.count.get().n, 1);
+
+    const row = s.store.db.prepare('SELECT * FROM leads').get();
+    assert.equal(row.segment, 'small');
+    assert.equal(row.device_band, '2-5');
+    assert.deepEqual(brandsOf(1), ['canon', 'hp']);
+  });
+
+  test('vēlāks pieteikums bez atbildēm tās nenodzēš', async () => {
+    await s.post('/api/leads', {
+      email, consent: true, lang: 'lv', segment: 'medium', devices: '6-20', brands: ['ricoh'],
+    });
+    await s.post('/api/leads', { email, consent: true, lang: 'lv' });
+
+    const row = s.store.db.prepare('SELECT * FROM leads').get();
+    assert.equal(row.segment, 'medium', 'atbildētais paliek');
+    assert.equal(row.device_band, '6-20');
+    assert.deepEqual(brandsOf(1), ['ricoh'], 'zīmoli paliek, jo lauka nebija');
+  });
+
+  test('tukšs zīmolu saraksts nozīmē «nevienu» un notīra iepriekšējos', async () => {
+    await s.post('/api/leads', { email, consent: true, lang: 'lv', brands: ['canon', 'hp'] });
+    await s.post('/api/leads', { email, consent: true, lang: 'lv', brands: [] });
+    assert.deepEqual(brandsOf(1), []);
+  });
+
+  test('zīmoli nomainās, nevis sakrājas', async () => {
+    await s.post('/api/leads', { email, consent: true, lang: 'lv', brands: ['canon', 'hp'] });
+    await s.post('/api/leads', { email, consent: true, lang: 'lv', brands: ['xerox'] });
+    assert.deepEqual(brandsOf(1), ['xerox']);
+  });
+
+  test('nezināms zīmols neaptur pieteikumu', async () => {
+    const res = await s.post('/api/leads', {
+      email, consent: true, lang: 'lv', brands: ['canon', 'nav-taada'],
+    });
+    assert.equal(res.status, 201);
+    assert.deepEqual(brandsOf(1), ['canon']);
+  });
+
+  test('abi soļi paliek notikumu vēsturē', async () => {
+    await s.post('/api/leads', { email, consent: true, lang: 'lv' });
+    await s.post('/api/leads', { email, consent: true, lang: 'lv', segment: 'private' });
+    const kinds = s.store.db.prepare('SELECT kind FROM lead_events ORDER BY id').all().map((r) => r.kind);
+    assert.deepEqual(kinds, ['created', 'updated']);
+  });
+
+  test('v_leads parāda zīmolus cilvēklasāmi', async () => {
+    await s.post('/api/leads', { email, consent: true, lang: 'lv', brands: ['konica', 'canon'] });
+    const view = s.store.db.prepare('SELECT brands FROM v_leads').get();
+    assert.match(view.brands, /Canon/);
+    assert.match(view.brands, /Konica Minolta/);
+  });
+});
+
 describe('POST /api/leads — griesti', () => {
   test('pārāk liels ķermenis saņem 413, nevis pārtrauktu savienojumu', async () => {
     const s = await startApp({ maxBody: 1024, rate: { max: 50 } });
@@ -220,12 +305,14 @@ describe('lasīšanas galapunkti', () => {
     assert.deepEqual(body.device_models.map((m) => m.mentions), [1, 1]);
   });
 
-  test('/api/health ir atvērts un rāda skaitu', async () => {
+  test('/api/health ir atvērts, bet neizpauž pieteikumu skaitu', async () => {
     const res = await s.get('/api/health');
     assert.equal(res.status, 200);
     const body = await res.json();
     assert.equal(body.ok, true);
-    assert.equal(body.leads, 2);
+    assert.equal(body.leads, undefined,
+      'skaits ir gan konkurenta mērījums, gan pierādījums, ka «pirmie 10» jau ir aizņemti');
+    assert.equal(body.db, undefined, 'faila nosaukums nav jāzina nevienam ārpusē');
   });
 });
 

@@ -34,7 +34,11 @@ const LIMITS = {
   email: 254,                 // RFC 5321 garākā adrese
   name: 120,
   model: 120,
-  rateMax: 5,                 // iesniegumi uz IP
+  brands: 12,                 // tik daudz zīmolu formā vispār ir
+  /* Pieteikšanās birojā notiek no vienas publiskās IP adreses, un viens
+     pieteikums ir divi pieprasījumi (pieteikums, tad aptauja). Seši nozīmēja
+     trīs kolēģus desmit minūtēs; rakstīšana ir lēta, atteikts lead nav. */
+  rateMax: 30,
   rateWindowMs: 10 * 60 * 1000,
 };
 
@@ -57,6 +61,10 @@ const MIME = {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+/* Valodas, kurās lapa pastāv. Tās pašas ir shēmas CHECK ierobežojumā, tāpēc
+   nezināmu kodu labāk nomainīt pret 'lv' nekā ļaut rakstīšanai nokrist. */
+const LANGS = new Set(['lv', 'en', 'it', 'fr', 'de']);
+
 // ---------------------------------------------------------------- datubāze ---
 
 /**
@@ -78,6 +86,7 @@ function openStore(dbPath) {
     segment: new Set(db.prepare('SELECT code FROM segments').all().map((r) => r.code)),
     device_band: new Set(db.prepare('SELECT code FROM device_bands').all().map((r) => r.code)),
     price_band: new Set(db.prepare('SELECT code FROM price_bands').all().map((r) => r.code)),
+    brand: new Set(db.prepare('SELECT code FROM brands').all().map((r) => r.code)),
   };
 
   const q = {
@@ -86,16 +95,29 @@ function openStore(dbPath) {
       INSERT INTO leads (email, email_norm, name, segment, device_band, device_model,
                          price_band, wants_beta, consent, lang)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`),
+    /* COALESCE, not plain assignment: the page now signs somebody up with an
+       e-mail alone and asks the rest afterwards, so a later submission that
+       carries fewer answers must not erase the ones already given. wants_beta
+       is sticky for the same reason — an opt-in is never withdrawn by silence. */
     update: db.prepare(`
-      UPDATE leads SET email = ?, name = ?, segment = ?, device_band = ?, device_model = ?,
-                       price_band = ?, wants_beta = ?, lang = ?,
-                       updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+      UPDATE leads SET email = ?,
+                       name         = COALESCE(?, name),
+                       segment      = COALESCE(?, segment),
+                       device_band  = COALESCE(?, device_band),
+                       device_model = COALESCE(?, device_model),
+                       price_band   = COALESCE(?, price_band),
+                       wants_beta   = MAX(wants_beta, ?),
+                       lang         = ?,
+                       updated_at   = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
       WHERE id = ?`),
+    clearBrands: db.prepare('DELETE FROM lead_brands WHERE lead_id = ?'),
+    addBrand: db.prepare('INSERT OR IGNORE INTO lead_brands (lead_id, brand) VALUES (?, ?)'),
     event: db.prepare('INSERT INTO lead_events (lead_id, kind, payload) VALUES (?, ?, ?)'),
     list: db.prepare('SELECT * FROM v_leads ORDER BY created_at DESC, id DESC LIMIT ?'),
     count: db.prepare('SELECT COUNT(*) AS n FROM leads'),
     priceDemand: db.prepare('SELECT * FROM v_price_demand'),
     segmentDemand: db.prepare('SELECT * FROM v_segment_demand'),
+    brandDemand: db.prepare('SELECT * FROM v_brand_demand'),
     models: db.prepare('SELECT * FROM v_device_models LIMIT 25'),
   };
 
@@ -116,6 +138,21 @@ function clean(value, max) {
 function pickCode(value, allowed) {
   const v = clean(value, 40);
   return v && allowed.has(v) ? v : null;
+}
+
+/**
+ * Vairākizvēles kodi. Atšķir «lauka nebija» (null) no «nekas nav atzīmēts»
+ * (tukšs masīvs) — pirmais neaiztiek jau saglabāto, otrais to notīra.
+ */
+function pickCodes(value, allowed, max = LIMITS.brands) {
+  if (!Array.isArray(value)) return null;
+  const seen = new Set();
+  for (const item of value) {
+    const code = pickCode(item, allowed);
+    if (code) seen.add(code);
+    if (seen.size >= max) break;
+  }
+  return [...seen];
 }
 
 /**
@@ -145,8 +182,9 @@ function validate(body, codes) {
       device_band: pickCode(body.devices, codes.device_band),
       device_model: clean(body.model, LIMITS.model),
       price_band: pickCode(body.priceBand, codes.price_band),
+      brands: pickCodes(body.brands, codes.brand),
       wants_beta: body.wantsBeta === true ? 1 : 0,
-      lang: body.lang === 'en' ? 'en' : 'lv',
+      lang: LANGS.has(body.lang) ? body.lang : 'lv',
     },
   };
 }
@@ -174,6 +212,13 @@ function saveLead(store, lead, raw) {
         lead.device_band, lead.device_model, lead.price_band, lead.wants_beta, lead.lang);
       id = Number(res.lastInsertRowid);
       status = 'created';
+    }
+
+    /* null nozīmē «lauka nebija» — jau atzīmētos zīmolus tas neaiztiek.
+       Masīvs, arī tukšs, aizstāj kopu pilnībā. */
+    if (lead.brands) {
+      store.q.clearBrands.run(id);
+      for (const brand of lead.brands) store.q.addBrand.run(id, brand);
     }
 
     store.q.event.run(id, status, raw);
@@ -323,8 +368,11 @@ function createApp(options = {}) {
       });
     }
 
+    /* Dzīvības pārbaude neko neizpauž: pieteikumu skaits ir gan konkurenta
+       mērījums, gan veids, kā pierādīt, ka «pirmie 10» jau ir aizņemti,
+       kamēr lapa to vēl sola. Skaitu rāda /api/stats, aiz pilnvaras. */
     if (route === '/api/health') {
-      return send(res, 200, { ok: true, leads: store.q.count.get().n, db: path.basename(store.path) });
+      return send(res, 200, { ok: true });
     }
 
     if (route === '/api/leads' && req.method === 'POST') {
@@ -383,6 +431,7 @@ function createApp(options = {}) {
         total: store.q.count.get().n,
         price_demand: store.q.priceDemand.all(),
         segment_demand: store.q.segmentDemand.all(),
+        brand_demand: store.q.brandDemand.all(),
         device_models: store.q.models.all(),
       });
     }
@@ -402,7 +451,7 @@ function createApp(options = {}) {
   };
 }
 
-module.exports = { createApp, openStore, validate, clean, pickCode, csv, saveLead, LIMITS };
+module.exports = { createApp, openStore, validate, clean, pickCode, pickCodes, csv, saveLead, LIMITS, LANGS };
 
 // ------------------------------------------------------------------- CLI ---
 

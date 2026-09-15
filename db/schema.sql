@@ -36,6 +36,16 @@ CREATE TABLE IF NOT EXISTS price_bands (
   sort       INTEGER NOT NULL
 );
 
+-- Iekārtu zīmoli. Nosaukumi ir īpašvārdi, tāpēc abās valodās vienādi, bet
+-- kolonnas paliek, lai tabula izskatītos tāpat kā pārējās uzmeklēšanas tabulas
+-- un lai «Cits» un «Nezinu» varētu tulkot.
+CREATE TABLE IF NOT EXISTS brands (
+  code     TEXT PRIMARY KEY,
+  label_lv TEXT    NOT NULL,
+  label_en TEXT    NOT NULL,
+  sort     INTEGER NOT NULL
+);
+
 INSERT OR IGNORE INTO segments (code, label_lv, label_en, sort) VALUES
   ('private', 'Es pats, mājās',                    'Myself, at home',                    1),
   ('small',   'Mazs uzņēmums, līdz 10 cilvēkiem',  'Small business, up to 10 people',    2),
@@ -55,6 +65,20 @@ INSERT OR IGNORE INTO price_bands (code, label_lv, label_en, eur_midpoint, sort)
   ('10+',    'Vairāk par 10 €',    'Over €10',        12.0, 4),
   ('unsure', 'Vēl nevaru pateikt', 'Cannot say yet',  NULL, 5);
 
+INSERT OR IGNORE INTO brands (code, label_lv, label_en, sort) VALUES
+  ('canon',   'Canon',          'Canon',          1),
+  ('hp',      'HP',             'HP',             2),
+  ('brother', 'Brother',        'Brother',        3),
+  ('epson',   'Epson',          'Epson',          4),
+  ('kyocera', 'Kyocera',        'Kyocera',        5),
+  ('xerox',   'Xerox',          'Xerox',          6),
+  ('ricoh',   'Ricoh',          'Ricoh',          7),
+  ('konica',  'Konica Minolta', 'Konica Minolta', 8),
+  ('lexmark', 'Lexmark',        'Lexmark',        9),
+  ('sharp',   'Sharp',          'Sharp',         10),
+  ('other',   'Cits',           'Other',         11),
+  ('unknown', 'Nezinu',         'Do not know',   12);
+
 -- ---------------------------------------------------------------------------
 -- Pieteikumi. Viena rinda uz e-pastu — atkārtots pieteikums atjauno atbildes,
 -- nevis rada dublikātu. Vēsture glabājas lead_events.
@@ -73,7 +97,10 @@ CREATE TABLE IF NOT EXISTS leads (
 
   wants_beta   INTEGER NOT NULL DEFAULT 0 CHECK (wants_beta IN (0, 1)),
   consent      INTEGER NOT NULL            CHECK (consent = 1),  -- bez piekrišanas rindas nav
-  lang         TEXT    NOT NULL DEFAULT 'lv' CHECK (lang IN ('lv', 'en')),
+  -- Valodas, kurās lapa pastāv. Ja sarakstam pievieno vēl vienu, datubāze ir
+  -- jāizveido no jauna: CHECK ierobežojumu SQLite ar ALTER TABLE nemaina.
+  lang         TEXT    NOT NULL DEFAULT 'lv'
+               CHECK (lang IN ('lv', 'en', 'it', 'fr', 'de')),
 
   created_at   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
   updated_at   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
@@ -87,6 +114,19 @@ CREATE INDEX IF NOT EXISTS idx_leads_created  ON leads (created_at);
 CREATE INDEX IF NOT EXISTS idx_leads_segment  ON leads (segment);
 CREATE INDEX IF NOT EXISTS idx_leads_price    ON leads (price_band);
 CREATE INDEX IF NOT EXISTS idx_leads_beta     ON leads (wants_beta) WHERE wants_beta = 1;
+
+-- ---------------------------------------------------------------------------
+-- Zīmoli uz pieteikumu. Cilvēkam mēdz būt vairāku ražotāju iekārtas, tāpēc šī
+-- ir saite, nevis kolonna leads tabulā. Atkārtots pieteikums šo kopu aizstāj
+-- pilnībā — atzīmēto var arī noņemt.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS lead_brands (
+  lead_id    INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  brand      TEXT    NOT NULL REFERENCES brands(code),
+  PRIMARY KEY (lead_id, brand)
+);
+
+CREATE INDEX IF NOT EXISTS idx_lead_brands_brand ON lead_brands (brand);
 
 -- ---------------------------------------------------------------------------
 -- Audita pēdas. leads glabā pašreizējo stāvokli, šī tabula — ko tieši un kad
@@ -117,6 +157,10 @@ SELECT
   l.device_band,  d.label_lv AS device_band_lv,
   l.device_model,
   l.price_band,   p.label_lv AS price_band_lv, p.eur_midpoint,
+  (SELECT group_concat(b.label_lv, ' / ')
+     FROM lead_brands lb JOIN brands b ON b.code = lb.brand
+    WHERE lb.lead_id = l.id
+    ORDER BY b.sort) AS brands,
   l.wants_beta,
   l.lang,
   l.created_at,
@@ -154,6 +198,21 @@ FROM segments s
 LEFT JOIN leads l ON l.segment = s.code
 GROUP BY s.code
 ORDER BY s.sort;
+
+-- Kuru ražotāju izvēlnes jāapraksta vispirms. Viens pieteikums var būt vairākos
+-- zīmolos, tāpēc summa pārsniedz pieteikumu skaitu — procenti ir no tiem, kas
+-- uz šo jautājumu vispār atbildēja.
+CREATE VIEW IF NOT EXISTS v_brand_demand AS
+SELECT
+  b.code,
+  b.label_lv,
+  COUNT(lb.lead_id) AS leads,
+  ROUND(COUNT(lb.lead_id) * 100.0 /
+        NULLIF((SELECT COUNT(DISTINCT lead_id) FROM lead_brands), 0), 1) AS pct
+FROM brands b
+LEFT JOIN lead_brands lb ON lb.brand = b.code
+GROUP BY b.code
+ORDER BY leads DESC, b.sort;
 
 -- Kuras iekārtas jāatbalsta vispirms
 CREATE VIEW IF NOT EXISTS v_device_models AS

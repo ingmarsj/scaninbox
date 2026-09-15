@@ -68,8 +68,8 @@ describe('leads ierobežojumi', () => {
     );
   });
 
-  test('valoda ir tikai lv vai en', () => {
-    assert.throws(() => insertLead(store, { lang: 'de' }), /CHECK|constraint/i);
+  test('valoda ir tikai kāda no lapas valodām', () => {
+    assert.throws(() => insertLead(store, { lang: 'ru' }), /CHECK|constraint/i);
   });
 
   test('wants_beta ir 0 vai 1', () => {
