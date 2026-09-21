@@ -59,8 +59,6 @@
   --device-ink:#DCE1DE;
   --device-dim:#818C92;
   --device-rule:#333C42;
-
-  --scrim:rgba(20,24,27,.58);
   --shadow:0 1px 1px rgba(20,24,27,.04), 0 10px 26px -14px rgba(20,24,27,.28);
   --shadow-lg:0 2px 4px rgba(20,24,27,.06), 0 28px 64px -28px rgba(20,24,27,.45);
 
@@ -83,7 +81,7 @@
   --sect-y:clamp(3rem,6vw,4.9rem);
 
   /* one master clock for the hero animation, so every part stays in step */
-  --cycle:11s;
+  --cycle:9s;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -111,7 +109,6 @@
     --device-ink:#DCE1DE;
     --device-dim:#788287;
     --device-rule:#242C31;
-    --scrim:rgba(0,0,0,.68);
     --shadow:0 1px 1px rgba(0,0,0,.5), 0 14px 34px -16px rgba(0,0,0,.8);
     --shadow-lg:0 2px 4px rgba(0,0,0,.5), 0 30px 70px -28px rgba(0,0,0,.9);
   }
@@ -141,7 +138,6 @@
   --device-ink:#DCE1DE;
   --device-dim:#788287;
   --device-rule:#242C31;
-  --scrim:rgba(0,0,0,.68);
   --shadow:0 1px 1px rgba(0,0,0,.5), 0 14px 34px -16px rgba(0,0,0,.8);
   --shadow-lg:0 2px 4px rgba(0,0,0,.5), 0 30px 70px -28px rgba(0,0,0,.9);
 }
@@ -149,8 +145,6 @@
 /* --------------------------------------------------------------- base --- */
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-/* Body alone does not hold iOS Safari while the bottom-sheet survey is open. */
-html.is-locked,html.is-locked body{overflow:hidden}
 @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
 /* Author `display` rules outrank the UA rule for [hidden]; state it once. */
 [hidden]{display:none !important}
@@ -299,6 +293,9 @@ b,strong{font-weight:600}
    Everything is keyframed against --cycle so the beats cannot drift apart.
    ========================================================================= */
 .fig{margin:0;display:flex;flex-direction:column;gap:.55rem}
+/* Single column: the figure keeps a device's proportions instead of stretching
+   to the full width of the text above it. */
+@media (max-width:979px){ .fig{max-width:34rem} }
 .fig__frame{border:1px solid var(--rule-2);background:var(--surface);padding:.7rem}
 .fig figcaption{
   font-family:var(--mono);font-size:var(--fs-mono);color:var(--ink-3);
@@ -328,20 +325,66 @@ b,strong{font-weight:600}
 .state span:nth-child(1){animation-name:state1}
 .state span:nth-child(2){animation-name:state2}
 .state span:nth-child(3){animation-name:state3;color:var(--led-ink)}
-@keyframes state1{0%,33%{opacity:1}33.01%,93%{opacity:0}93.01%,100%{opacity:1}}
-@keyframes state2{0%,33%{opacity:0}33.01%,58%{opacity:1}58.01%,100%{opacity:0}}
-@keyframes state3{0%,58%{opacity:0}58.01%,93%{opacity:1}93.01%,100%{opacity:0}}
+@keyframes state1{0%,28%{opacity:1}28.01%,90%{opacity:0}90.01%,100%{opacity:1}}
+@keyframes state2{0%,28%{opacity:0}28.01%,56%{opacity:1}56.01%,100%{opacity:0}}
+@keyframes state3{0%,56%{opacity:0}56.01%,90%{opacity:1}90.01%,100%{opacity:0}}
 
 .stage{display:grid;gap:0;background:var(--device);padding:.85rem;border-radius:var(--r)}
 
-/* --- 1. the flatbed --- */
-.bed{position:relative;overflow:hidden;aspect-ratio:1.95;display:flex;border:1px solid var(--device-rule);background:var(--device-2);padding:.75rem}
+/* --- 1. the machine ---
+   A lid above the glass and a control panel below it, so the dark rectangle
+   reads as a device with a button on it rather than as an abstract panel. */
+.mfp{display:flex;flex-direction:column}
+.mfp__lid{
+  height:9px;border:1px solid var(--device-rule);border-bottom:0;border-radius:3px 3px 0 0;
+  background:linear-gradient(180deg,#232B31,var(--device-2));
+  position:relative;
+}
+.mfp__lid::after{
+  content:"";position:absolute;left:50%;transform:translateX(-50%);bottom:2px;
+  width:22%;height:2px;border-radius:1px;background:var(--device-rule);
+}
+.bed{position:relative;overflow:hidden;aspect-ratio:2.1;display:flex;border:1px solid var(--device-rule);background:var(--device-2);padding:.7rem}
 .bed__guide{position:absolute;inset:0;pointer-events:none;font-family:var(--mono);font-size:.5625rem;letter-spacing:.11em;color:rgba(255,255,255,.28)}
 .bed__guide span{position:absolute}
 .bed__guide span:nth-child(1){top:.3rem;left:.4rem}
 .bed__guide span:nth-child(2){top:.3rem;right:.4rem}
 .bed__guide span:nth-child(3){bottom:.3rem;right:.4rem}
 
+/* the control panel: one key, and the rail that fills while it works */
+.mfp__panel{
+  display:flex;align-items:center;gap:.6rem;
+  padding:.4rem .55rem;
+  border:1px solid var(--device-rule);border-top:0;border-radius:0 0 3px 3px;
+  background:linear-gradient(180deg,var(--device-2),#0A0E10);
+}
+.key{
+  flex:none;display:grid;place-items:center;
+  padding:.2rem .5rem;border-radius:2px;
+  border:1px solid var(--device-rule);background:#1A2126;
+  font-family:var(--mono);font-size:.5625rem;letter-spacing:.14em;color:var(--device-dim);
+  animation:key var(--cycle) ease-out infinite;
+}
+/* pressed, then lit for as long as the lamp is moving */
+@keyframes key{
+  0%,3%{background:#1A2126;color:var(--device-dim);border-color:var(--device-rule);transform:none;box-shadow:none}
+  5%{transform:translateY(1px) scale(.97)}
+  8%{background:color-mix(in srgb,var(--led) 22%,#1A2126);color:var(--led);border-color:color-mix(in srgb,var(--led) 50%,transparent);transform:none;box-shadow:0 0 10px -1px var(--led-glow)}
+  26%{background:color-mix(in srgb,var(--led) 22%,#1A2126);color:var(--led);border-color:color-mix(in srgb,var(--led) 50%,transparent);box-shadow:0 0 10px -1px var(--led-glow)}
+  30%,100%{background:#1A2126;color:var(--device-dim);border-color:var(--device-rule);box-shadow:none}
+}
+
+/* the progress rail, now part of the panel */
+.rail-progress{flex:1 1 auto;height:2px;background:var(--device-rule);overflow:hidden}
+.rail-progress i{display:block;height:100%;width:100%;background:var(--led);transform-origin:left center;animation:fill var(--cycle) linear infinite}
+@keyframes fill{
+  0%,5%{transform:scaleX(0)}
+  27%{transform:scaleX(1)}
+  88%{transform:scaleX(1)}
+  88.01%,100%{transform:scaleX(0)}
+}
+
+/* --- the page on the glass --- */
 .sheet{
   position:relative;flex:1;background:#FCFCFA;padding:.7rem .8rem;
   display:flex;flex-direction:column;gap:.42rem;
@@ -349,41 +392,61 @@ b,strong{font-weight:600}
   animation:feed var(--cycle) ease-in-out infinite;
 }
 @keyframes feed{
-  0%{transform:translateY(-6%) scale(.985);opacity:.55}
-  6%,92%{transform:none;opacity:1}
-  98%,100%{transform:translateY(-6%) scale(.985);opacity:.55}
+  0%{transform:translateY(-7%) rotate(-.4deg);opacity:.5}
+  3%,90%{transform:none;opacity:1}
+  97%,100%{transform:translateY(-7%) rotate(-.4deg);opacity:.5}
+}
+
+/* The document is not on the page until the lamp has passed over it. That one
+   detail is the difference between "a picture of a scanner" and "a scan
+   happening": the content arrives under the light, left to right, in step
+   with the beam above it. */
+.sheet__scan{
+  display:flex;flex-direction:column;gap:.42rem;
+  clip-path:inset(0 0 0 0);
+  animation:reveal var(--cycle) linear infinite;
+}
+@keyframes reveal{
+  0%,5%{clip-path:inset(0 100% 0 0)}
+  26%{clip-path:inset(0 0 0 0)}
+  88%{clip-path:inset(0 0 0 0)}
+  88.01%,100%{clip-path:inset(0 100% 0 0)}
 }
 .sheet__hd{display:flex;align-items:baseline;justify-content:space-between;gap:.75rem;padding-bottom:.38rem;border-bottom:1px solid #DFE3E6}
-.sheet__t{font-family:var(--sans);font-weight:600;font-size:.72rem;color:#181E24}
-.sheet__d{font-family:var(--mono);font-size:.5625rem;color:#8B959C}
+.sheet__t{font-family:var(--sans);font-weight:600;font-size:.72rem;color:#181E24;white-space:nowrap}
+.sheet__d{font-family:var(--mono);font-size:.5625rem;color:#8B959C;white-space:nowrap}
 .sheet__body{display:flex;flex-direction:column;gap:.3rem}
 .ln{height:3px;background:#D3D9DE}
-.w96{width:96%}.w82{width:82%}.w90{width:90%}.w60{width:60%}.w42{width:42%}
-.sheet__ft{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:.5rem;font-family:var(--mono);font-size:.5625rem;color:#7C868D;letter-spacing:.05em}
-.sheet__ft u{text-decoration:none;color:#17518A}
+.ln--strong{height:5px;background:#AEB7BE}
+.w96{width:96%}.w82{width:82%}.w90{width:90%}.w60{width:60%}.w42{width:42%}.w28{width:28%}
+.sheet__body--two{margin-top:.5rem}
+.sheet__sum{display:flex;justify-content:flex-end;margin-top:.6rem;padding-top:.45rem;border-top:1px solid #E4E8EA}
 
-/* the lamp: a bright bar that crosses the sheet once per cycle */
+/* the size only exists once there is a file, so it arrives at the end */
+.sheet__ft{
+  margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  font-family:var(--mono);font-size:.5625rem;color:#7C868D;letter-spacing:.05em;
+  animation:stamp var(--cycle) ease-out infinite;
+}
+.sheet__ft u{text-decoration:none;color:#17518A;font-weight:500}
+@keyframes stamp{
+  0%,26%{opacity:0;transform:translateY(3px)}
+  31%,88%{opacity:1;transform:none}
+  91%,100%{opacity:0;transform:translateY(3px)}
+}
+
+/* the lamp: a bright bar that crosses the glass once per cycle */
 .beam{
-  position:absolute;top:0;bottom:0;width:16%;pointer-events:none;mix-blend-mode:screen;
-  background:linear-gradient(90deg,transparent,var(--led-glow) 40%,rgba(255,255,255,.5) 50%,var(--led-glow) 60%,transparent);
+  position:absolute;top:0;bottom:0;width:15%;pointer-events:none;mix-blend-mode:screen;
+  background:linear-gradient(90deg,transparent,var(--led-glow) 38%,rgba(255,255,255,.55) 50%,var(--led-glow) 62%,transparent);
   animation:sweep var(--cycle) linear infinite;
 }
-.beam::after{content:"";position:absolute;inset:0 auto 0 50%;width:1px;background:var(--led);box-shadow:0 0 12px 3px var(--led-glow)}
+.beam::after{content:"";position:absolute;inset:0 auto 0 50%;width:1px;background:var(--led);box-shadow:0 0 14px 4px var(--led-glow)}
 @keyframes sweep{
-  0%,5%{left:-16%;opacity:0}
+  0%,5%{left:-15%;opacity:0}
   6%{opacity:1}
-  30%{left:100%;opacity:1}
-  32%,100%{left:100%;opacity:0}
-}
-
-/* the progress rail under the bed, filling while the lamp travels */
-.rail-progress{height:2px;background:var(--device-rule);overflow:hidden;margin-top:.55rem}
-.rail-progress i{display:block;height:100%;width:100%;background:var(--led);transform-origin:left center;animation:fill var(--cycle) linear infinite}
-@keyframes fill{
-  0%,5%{transform:scaleX(0)}
-  31%{transform:scaleX(1)}
-  92%{transform:scaleX(1)}
-  92.01%,100%{transform:scaleX(0)}
+  26%{left:100%;opacity:1}
+  28%,100%{left:100%;opacity:0}
 }
 
 /* --- 2. the wire the mail flies along ---
@@ -391,10 +454,23 @@ b,strong{font-weight:600}
    is the runway that leads to it, so the packet travels the line's own width
    and stops AT the address however wide that address happens to be. The chip
    lights only once the packet has arrived. */
-.wire{position:relative;display:flex;align-items:center;gap:.45rem;height:58px;margin:.15rem 0 .1rem;padding-inline:.15rem}
+.wire{position:relative;display:flex;align-items:center;gap:.45rem;height:56px;margin:.35rem 0 .1rem;padding-inline:.15rem}
 .wire__line{
   position:relative;flex:1 1 auto;min-width:2.75rem;height:1px;
   background:repeating-linear-gradient(90deg,var(--device-rule) 0 6px,transparent 6px 12px);
+}
+/* the line lights up behind the packet, so the wire reads as carrying it */
+.trail{
+  position:absolute;inset:0;transform-origin:left center;transform:scaleX(0);
+  background:linear-gradient(90deg,color-mix(in srgb,var(--led) 35%,transparent),var(--led));
+  box-shadow:0 0 8px var(--led-glow);
+  animation:trail var(--cycle) cubic-bezier(.4,0,.35,1) infinite;
+}
+@keyframes trail{
+  0%,31%{transform:scaleX(0)}
+  52%{transform:scaleX(1)}
+  86%{transform:scaleX(1)}
+  89%,100%{transform:scaleX(0)}
 }
 .wire__to{
   flex:0 1 auto;min-width:0;
@@ -408,9 +484,9 @@ b,strong{font-weight:600}
    screen let it shrink rather than clip */
 @media (max-width:560px){ .wire__to{font-size:.5625rem;letter-spacing:0;padding-inline:.35rem} }
 @keyframes toglow{
-  0%,54%{color:var(--device-dim);border-color:var(--device-rule)}
-  58%,86%{color:var(--led);border-color:color-mix(in srgb,var(--led) 55%,transparent)}
-  93%,100%{color:var(--device-dim);border-color:var(--device-rule)}
+  0%,50%{color:var(--device-dim);border-color:var(--device-rule);box-shadow:none}
+  54%,84%{color:var(--led);border-color:color-mix(in srgb,var(--led) 55%,transparent);box-shadow:0 0 12px -2px var(--led-glow)}
+  90%,100%{color:var(--device-dim);border-color:var(--device-rule);box-shadow:none}
 }
 
 /* the packet: outer element carries X, inner carries the arc, so the path
@@ -419,20 +495,20 @@ b,strong{font-weight:600}
 .pkt i{
   display:grid;place-items:center;width:22px;height:22px;
   background:var(--led);color:var(--on-led);border-radius:2px;
-  box-shadow:0 0 0 4px var(--led-glow);
+  box-shadow:0 0 0 4px var(--led-glow), 0 0 16px var(--led-glow);
   animation:arc var(--cycle) ease-in-out infinite;
 }
 .pkt svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8}
 @keyframes fly{
-  0%,33%{left:0;opacity:0}
-  35%{left:0;opacity:1}
-  56%{left:calc(100% - 22px);opacity:1}
-  58%,100%{left:calc(100% - 22px);opacity:0}
+  0%,30%{left:0;opacity:0}
+  32%{left:0;opacity:1}
+  52%{left:calc(100% - 22px);opacity:1}
+  54%,100%{left:calc(100% - 22px);opacity:0}
 }
 @keyframes arc{
-  0%,35%{transform:translateY(0) scale(.7)}
-  45%{transform:translateY(-16px) scale(1)}
-  56%,100%{transform:translateY(2px) scale(.8)}
+  0%,32%{transform:translateY(0) scale(.6)}
+  42%{transform:translateY(-17px) scale(1)}
+  52%,100%{transform:translateY(2px) scale(.8)}
 }
 
 /* --- 3. the inbox the mail lands in --- */
@@ -450,7 +526,7 @@ b,strong{font-weight:600}
   font-style:normal;font-size:.5625rem;font-weight:500;
   transform:scale(0);animation:pop var(--cycle) cubic-bezier(.2,1.6,.4,1) infinite;
 }
-@keyframes pop{0%,61%{transform:scale(0)}66%{transform:scale(1.25)}70%,92%{transform:scale(1)}96%,100%{transform:scale(0)}}
+@keyframes pop{0%,57%{transform:scale(0)}62%{transform:scale(1.25)}66%,88%{transform:scale(1)}93%,100%{transform:scale(0)}}
 
 .inbox__list{list-style:none;margin:0;padding:0}
 .mail{
@@ -477,15 +553,18 @@ b,strong{font-weight:600}
 .mail--new .mail__tx b{color:var(--device-ink)}
 .mail--new .mail__clip{color:var(--led);opacity:1}
 @keyframes land{
-  0%,56%{height:0;opacity:0;border-bottom-color:transparent}
-  57%{opacity:0}
-  63%{height:44px;opacity:1;border-bottom-color:var(--device-rule)}
-  92%{height:44px;opacity:1;border-bottom-color:var(--device-rule)}
-  96%,100%{height:0;opacity:0;border-bottom-color:transparent}
+  0%,52%{height:0;opacity:0;border-bottom-color:transparent}
+  53%{opacity:0}
+  60%{height:44px;opacity:1;border-bottom-color:var(--device-rule)}
+  88%{height:44px;opacity:1;border-bottom-color:var(--device-rule)}
+  93%,100%{height:0;opacity:0;border-bottom-color:transparent}
 }
 
 /* off-screen the whole thing stops; nothing animates behind the viewport */
 .fig__frame.is-idle *{animation-play-state:paused !important}
+/* One frame with no animations at all: removing it puts every keyframe back
+   to its first frame, which is how the story rewinds. */
+.fig__frame.is-rewound *{animation:none !important}
 
 /* One still frame, and it is the one the figure exists to show: the page is
    scanned, the rail is full, the mail has landed. The lamp and the packet are
@@ -493,6 +572,9 @@ b,strong{font-weight:600}
 @media (prefers-reduced-motion: reduce){
   .fig__frame *{animation:none !important}
   .beam{opacity:0}
+  .sheet__scan{clip-path:inset(0 0 0 0)}
+  .sheet__ft{opacity:1;transform:none}
+  .trail{transform:scaleX(1)}
   .rail-progress i{transform:none}
   .pkt{opacity:0}
   .wire__to{color:var(--led);border-color:color-mix(in srgb,var(--led) 55%,transparent)}
@@ -578,27 +660,22 @@ b,strong{font-weight:600}
 
 /* ----------------------------------------------------------- the steps --- */
 /* Nimda "How it works" izkārtojums — kartītes ar ikonu, numuru un laiku. */
-.steps{list-style:none;margin:0;padding:0;display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule)}
-@media (min-width:640px){ .steps{grid-template-columns:repeat(2,minmax(0,1fr))} }
-@media (min-width:1060px){ .steps{grid-template-columns:repeat(4,minmax(0,1fr))} }
-.step{display:flex;flex-direction:column;gap:.5rem;padding:1.15rem 1.1rem 1.25rem;background:var(--surface)}
-.step__ic{
-  width:36px;height:36px;display:grid;place-items:center;
-  border:1px solid var(--rule-2);border-radius:var(--r);color:var(--blue);background:var(--paper);
-}
-.step__ic svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.6}
-.step__n{font-family:var(--mono);font-size:var(--fs-mono);color:var(--ink-3);letter-spacing:.1em}
-.step h3{font-family:var(--sans);font-size:var(--fs-h3);font-weight:600}
-.step p{color:var(--ink-2);font-size:var(--fs-sm);line-height:1.55}
-.step__t{
-  margin-top:auto;padding-top:.7rem;
-  font-family:var(--mono);font-size:.6875rem;letter-spacing:.05em;color:var(--led-ink);
-  display:inline-flex;align-items:center;gap:.35rem;
-}
-.step__t svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8}
+.how-it-works-intro{color:var(--ink-2);font-size:var(--fs-sm);margin:-.4rem 0 1.4rem;max-width:64ch}
+.steps{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}
+.step{display:grid;gap:.15rem .9rem;grid-template-columns:2.4rem minmax(0,1fr);padding:.95rem 0;border-bottom:1px solid var(--rule)}
+.step-icon{grid-column:1;width:1.9rem;height:1.9rem;color:var(--blue)}
+.step-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.5}
+.step h3{font-family:var(--sans);font-size:var(--fs-h3);font-weight:600;grid-column:2}
+.step p{color:var(--ink-2);font-size:var(--fs-sm);max-width:60ch;grid-column:2}
+
+/* the strip that hands the reader from the steps down into the table */
+.cfg-flow{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:1.4rem 0 .8rem;font-family:var(--mono);font-size:.75rem;color:var(--ink-2)}
+.cfg-flow__step{display:inline-flex;align-items:center;gap:.35rem}
+.cfg-flow__step svg{width:16px;height:16px;flex:none;color:var(--blue);stroke:currentColor;fill:none;stroke-width:1.6}
+.cfg-flow__arrow{color:var(--rule-2)}
 
 /* ------------------------------------------------------- device config --- */
-.cfg{background:var(--device);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow)}
+.cfg{background:var(--device);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow);margin-top:0}
 .cfg__hd{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;padding:.65rem .95rem;background:var(--device-2);border-bottom:1px solid var(--device-rule)}
 .cfg__hd b{font-family:var(--mono);font-size:var(--fs-mono);font-weight:500;letter-spacing:.11em;text-transform:uppercase;color:var(--device-ink)}
 .cfg__hd span{margin-inline-start:auto;font-family:var(--mono);font-size:.6875rem;color:var(--device-dim)}
@@ -617,7 +694,9 @@ b,strong{font-weight:600}
   .cfg table,.cfg tbody,.cfg tr,.cfg th,.cfg td{display:block;white-space:normal}
   .cfg tr{padding:.4rem 0;border-bottom:1px solid var(--device-rule)}
   .cfg tr:last-child{border-bottom:0}
-  .cfg th,.cfg td{width:auto;border-bottom:0;padding-block:0}
+  /* the generated address has no spaces to break at, and it is longer than a
+     phone is wide */
+  .cfg th,.cfg td{width:auto;border-bottom:0;padding-block:0;overflow-wrap:anywhere}
   .cfg th{padding-bottom:.1rem}
 }
 
@@ -745,91 +824,48 @@ b,strong{font-weight:600}
 .dock__x:hover{color:var(--ink);background:var(--panel)}
 @media (prefers-reduced-motion: reduce){ .dock{transition:none} .dock .led{animation:none} }
 
-/* ============================== the survey ================================
-   The lead is already saved when this opens. Everything inside is optional
-   and answered by tapping, never by typing or choosing from a drop-down.
+/* ========================= the follow-up questions ========================
+   Not a dialog. It appears in the card the visitor just used, under the line
+   confirming they are on the list, one question at a time with its own place
+   in the queue shown, and a way out at every step.
    ========================================================================= */
-.scrim{
-  position:fixed;inset:0;z-index:120;
-  display:flex;align-items:flex-end;justify-content:center;
-  padding:0;
-  background:var(--scrim);
-  opacity:0;pointer-events:none;transition:opacity .2s ease;
+.followup{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--rule)}
+.fu__intro{font-family:var(--sans);font-size:var(--fs-xs);color:var(--ink-3);line-height:1.5;margin-bottom:.9rem}
+.fu__n{
+  font-family:var(--mono);font-size:.6875rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:.35rem;
 }
-@media (min-width:640px){ .scrim{align-items:center;padding:1.5rem} }
-.scrim.is-on{opacity:1;pointer-events:auto}
-.modal{
-  width:100%;max-width:33rem;max-height:92vh;overflow-y:auto;
-  background:var(--surface);border:1px solid var(--rule-2);
-  border-radius:var(--r-lg) var(--r-lg) 0 0;
-  box-shadow:var(--shadow-lg);
-  transform:translateY(1.5rem);transition:transform .22s ease;
+.fu__q{font-family:var(--sans);font-size:var(--fs-sm);font-weight:600;color:var(--ink);margin-bottom:.7rem}
+.fu__q span{font-weight:400;color:var(--ink-3);font-size:.9em}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem}
+.chip{
+  font-family:var(--sans);font-size:var(--fs-xs);
+  padding:.4rem .7rem;border:1px solid var(--rule-2);border-radius:999px;
+  background:var(--surface);color:var(--ink-2);cursor:pointer;
+  transition:background .12s ease,border-color .12s ease,color .12s ease;
 }
-@media (min-width:640px){ .modal{border-radius:var(--r-lg);max-height:88vh} }
-.scrim.is-on .modal{transform:none}
-@media (prefers-reduced-motion: reduce){ .scrim,.modal{transition:none} }
-
-.modal__hd{
-  display:flex;align-items:flex-start;gap:.75rem;
-  padding:clamp(1.1rem,3vw,1.5rem) clamp(1.1rem,3vw,1.5rem) .9rem;
-  border-bottom:1px solid var(--rule);
-}
-.modal__ic{flex:none;width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--led);border-radius:var(--r)}
-.modal__ic svg{width:16px;height:16px;fill:none;stroke:var(--led);stroke-width:2.4}
-.modal__hd h2{font-family:var(--sans);font-size:1.2rem;font-weight:600}
-.modal__hd p{margin-top:.3rem;font-size:var(--fs-sm);color:var(--ink-2)}
-.modal__hd code{font-family:var(--mono);font-size:.88em;color:var(--ink);background:var(--panel);padding:.05rem .25rem;word-break:break-all}
-.modal__x{
-  margin-inline-start:auto;flex:none;width:28px;height:28px;
-  display:grid;place-items:center;background:transparent;border:1px solid transparent;border-radius:var(--r);
-  color:var(--ink-3);cursor:pointer;font-family:var(--sans);font-size:1.15rem;line-height:1;
-}
-.modal__x:hover{color:var(--ink);border-color:var(--rule-2)}
-.modal__bd{padding:clamp(1.1rem,3vw,1.5rem)}
-.modal__ask{font-size:var(--fs-sm);color:var(--ink-2);margin-bottom:1.1rem}
-.modal__ask b{color:var(--ink)}
-/* Twelve brand chips wrap to four rows on a phone, which pushes the actions
-   out of the modal's own scroll area; pin them to the bottom instead. */
-.modal__ft{
-  position:sticky;bottom:0;z-index:1;
-  display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;
-  padding:.8rem clamp(1.1rem,3vw,1.5rem);
-  background:var(--surface);border-top:1px solid var(--rule);
-}
-.modal__ft .btn--ghost{margin-inline-start:auto}
-
-.q{margin:0 0 1.15rem;padding:0;border:0}
-.q > legend,.q__lg{
-  display:block;
-  font-family:var(--mono);font-size:var(--fs-mono);font-weight:500;letter-spacing:.11em;text-transform:uppercase;
-  color:var(--ink);padding:0 0 .4rem;width:100%;border-bottom:1px solid var(--rule);margin-bottom:.6rem;
-}
-.q > legend span,.q__lg span{text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink-3);font-size:.9em;margin-inline-start:.4rem}
-.chips{display:flex;flex-wrap:wrap;gap:.4rem}
-/* The one answer we cannot offer as a list of taps. */
-.q__in{
-  width:100%;
+.chip:hover{border-color:var(--ink-3);color:var(--ink)}
+.chip.is-picked{background:var(--blue);border-color:var(--blue);color:var(--on-blue);font-weight:600}
+@media (prefers-reduced-motion: reduce){ .chip{transition:none} }
+.fu__row{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-bottom:.6rem}
+.fu__in{
+  flex:1 1 11rem;min-width:0;
   font-family:var(--sans);font-size:var(--fs-sm);color:var(--ink);
   background:var(--paper);border:1px solid var(--rule-2);border-radius:var(--r);
   padding:.5rem .6rem;
 }
-.q__in::placeholder{color:var(--ink-3)}
-.q__in:focus{outline:none;border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
-.chip{position:relative;display:inline-flex}
-.chip input{position:absolute;inset:0;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
-.chip span{
-  display:inline-flex;align-items:center;gap:.35rem;
-  padding:.38rem .65rem;
-  border:1px solid var(--rule-2);border-radius:var(--r);background:var(--paper);
-  font-family:var(--sans);font-size:var(--fs-xs);color:var(--ink-2);
-  transition:background .12s ease,border-color .12s ease,color .12s ease;
+.fu__in::placeholder{color:var(--ink-3)}
+.fu__in:focus{outline:none;border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
+.fu__skip{
+  font-family:var(--sans);font-size:var(--fs-xs);color:var(--ink-3);
+  background:none;border:0;padding:0;cursor:pointer;
+  text-decoration:underline;text-underline-offset:.15em;
 }
-.chip input:hover + span{border-color:var(--ink-3);color:var(--ink)}
-.chip input:checked + span{background:var(--blue);border-color:var(--blue);color:var(--on-blue);font-weight:600}
-.chip input:focus-visible + span{outline:2px solid var(--blue);outline-offset:2px}
-@media (prefers-reduced-motion: reduce){ .chip span{transition:none} }
-
-.done{display:flex;flex-direction:column;gap:.7rem;align-items:flex-start;padding:clamp(1.1rem,3vw,1.5rem)}
+.fu__skip:hover{color:var(--ink)}
+.fu__done{
+  display:flex;gap:.5rem;align-items:flex-start;
+  font-family:var(--sans);font-size:var(--fs-sm);color:var(--ink-2);
+}
 .done p{font-size:var(--fs-sm);color:var(--ink-2);max-width:46ch}
 </style>
 <!-- ARTIFACT:SPLIT -->
@@ -916,28 +952,42 @@ b,strong{font-weight:600}
             </div>
 
             <div class="stage" aria-hidden="true">
-              <!-- 1. the sheet on the glass, and the lamp that crosses it -->
-              <div class="bed">
-                <div class="bed__guide"><span>A4</span><span>300 DPI</span><span>ADF</span></div>
-                <div class="sheet">
-                  <div class="sheet__hd">
-                    <span class="sheet__t" data-i18n="anim.doc">Rēķins Nr. 2026/0412</span>
-                    <span class="sheet__d" data-i18n="anim.date">04.09.2026</span>
+              <!-- 1. the machine: a lid, the glass, and a panel with one key -->
+              <div class="mfp">
+                <span class="mfp__lid"></span>
+                <div class="bed">
+                  <div class="bed__guide"><span>A4</span><span>300 DPI</span><span>ADF</span></div>
+                  <div class="sheet">
+                    <div class="sheet__scan">
+                      <div class="sheet__hd">
+                        <span class="sheet__t" data-i18n="anim.doc">Rēķins Nr. 2026/0412</span>
+                        <span class="sheet__d" data-i18n="anim.date">04.09.2026</span>
+                      </div>
+                      <div class="sheet__body">
+                        <span class="ln w96"></span><span class="ln w82"></span>
+                        <span class="ln w90"></span><span class="ln w60"></span>
+                      </div>
+                      <div class="sheet__body sheet__body--two">
+                        <span class="ln w96"></span><span class="ln w96"></span>
+                        <span class="ln w82"></span><span class="ln w90"></span>
+                        <span class="ln w42"></span>
+                      </div>
+                      <div class="sheet__sum"><span class="ln ln--strong w28"></span></div>
+                    </div>
+                    <div class="sheet__ft"><span>A4 / 300 DPI</span><u data-i18n="anim.pdf">PDF 1,8 MB</u></div>
                   </div>
-                  <div class="sheet__body">
-                    <span class="ln w96"></span><span class="ln w82"></span>
-                    <span class="ln w90"></span><span class="ln w60"></span>
-                    <span class="ln w96"></span><span class="ln w42"></span>
-                  </div>
-                  <div class="sheet__ft"><span>A4 / 300 DPI</span><u data-i18n="anim.pdf">PDF 1,8 MB</u></div>
+                  <div class="beam"></div>
                 </div>
-                <div class="beam"></div>
+                <div class="mfp__panel">
+                  <span class="key">SCAN</span>
+                  <span class="rail-progress"><i></i></span>
+                </div>
               </div>
-              <div class="rail-progress"><i></i></div>
 
               <!-- 2. the wire: the mail leaves the machine and flies to the address -->
               <div class="wire">
                 <span class="wire__line">
+                  <i class="trail"></i>
                   <span class="pkt"><i><svg viewBox="0 0 24 24"><rect x="2.8" y="5.4" width="18.4" height="13.2"/><path d="M3.4 6.6 12 12.9l8.6-6.3"/></svg></i></span>
                 </span>
                 <span class="wire__to" id="wire-to" data-i18n="anim.to">birojs@inbox.eu</span>
@@ -982,7 +1032,7 @@ b,strong{font-weight:600}
               </div>
             </div>
           </div>
-          <figcaption data-i18n="fig.cap"><b>1. att.</b> — Ierīce ar saviem piekļuves datiem autentificējas SMTP serverī un nosūta PDF uz tavu norādīto adresi. Ieraksti savu e-pastu formā, un animācija to parādīs.</figcaption>
+          <figcaption data-i18n="fig.cap"><b>1. att.</b> — Ierīce ar saviem piekļuves datiem autentificējas SMTP serverī un nosūta PDF uz tavu norādīto adresi. Ieraksti savu e-pastu formā, un vēstule animācijā aizlidos uz to.</figcaption>
         </figure>
       </div>
     </div>
@@ -1100,59 +1150,55 @@ b,strong{font-weight:600}
     <div class="wrap sect__grid">
       <p class="rail" data-i18n="rail.how">Kā tas strādā</p>
       <div class="col">
-        <h2 data-i18n="how.h2">Četri soļi, vienu reizi katrai ierīcei</h2>
-        <p class="prose" data-i18n="how.lede">Viena uzstādīšana. Pēc tam skenēšana vienkārši strādā — arī tad, kad iekārtu pārstartē, un arī tad, kad birojā nomainās cilvēki.</p>
-
+        <h2 data-i18n="how.h2">No printera nopirkšanas līdz strādājošam digitālam ieradumam</h2>
+        <p class="how-it-works-intro" data-i18n="how.lede">Ar šo problēmu lielākā daļa sastopas vienādi: nopērk vai manto printeri, ierauga, ka tas jau sola Scan-to-Email, un tad iestrēgst pie SMTP ekrāna. ScanInbox pārlec taisni no «man ir printeris» uz «tas man atsūta skenējumu» — viena vadīta uzstādīšana, un tad tas vienkārši strādā tik ilgi, kamēr iekārta tev pieder.</p>
         <ol class="steps">
           <li class="step">
-            <span class="step__ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12.4a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2zM4.4 20.4c.7-3.6 3.9-5.6 7.6-5.6s6.9 2 7.6 5.6"/></svg></span>
-            <span class="step__n">01</span>
-            <h3 data-i18n="how.s1.h">Izveido kontu</h3>
-            <p data-i18n="how.s1.p">Ar e-pastu, kurā gribi saņemt skenējumus. Bez uzņēmuma reģistrācijas numura un bez sarunas ar pārdevēju.</p>
-            <span class="step__t"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3 1.8"/></svg><span data-i18n="how.s1.t">~30 sekundes</span></span>
+            <span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.4"/></svg></span>
+            <h3 data-i18n="how.s1.h">1. Nofotografē savu printeri</h3>
+            <p data-i18n="how.s1.p">Uzņem printera bildi. Mūsu AI noskaidro precīzu modeli — bez fiksēta saraksta, mēģinām katru printeri.</p>
           </li>
           <li class="step">
-            <span class="step__ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8.4h10a2 2 0 0 1 2 2v5.2H5v-5.2a2 2 0 0 1 2-2zM7.6 8.4V4.6h8.8v3.8M7.6 15.6h8.8V21H7.6z"/><circle cx="16.6" cy="11.6" r=".9" fill="currentColor" stroke="none"/></svg></span>
-            <span class="step__n">02</span>
-            <h3 data-i18n="how.s2.h">Pievieno ierīci</h3>
-            <p data-i18n="how.s2.p">Nosauc to tā, kā to sauc cilvēki ēkā — Reģistratūra, 3. stāvs, Grāmatvedība. Portāls uzreiz izdod šai iekārtai savus SMTP piekļuves datus.</p>
-            <span class="step__t"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3 1.8"/></svg><span data-i18n="how.s2.t">~1 minūte</span></span>
+            <span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><line x1="4" y1="6.5" x2="20" y2="6.5"/><circle cx="9" cy="6.5" r="2"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2"/><line x1="4" y1="17.5" x2="20" y2="17.5"/><circle cx="11" cy="17.5" r="2"/></svg></span>
+            <h3 data-i18n="how.s2.h">2. Saņem konfigurāciju uzreiz</h3>
+            <p data-i18n="how.s2.p">Mēs atpazīstam tava printera modeli, ģenerējam atbilstošos SMTP iestatījumus un izveidojam tam atsevišķu e-pasta adresi — plus pamācību, kur tieši konfigurācija printerī jāievada. Nevaram modeli atpazīt pārliecinoši? Tad parādām vispārīgo iestatījumu ekrānu.</p>
           </li>
           <li class="step">
-            <span class="step__ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 5.6h14.8a1 1 0 0 1 1 1v10.8a1 1 0 0 1-1 1H4.6a1 1 0 0 1-1-1V6.6a1 1 0 0 1 1-1z"/><path d="M7 9.4h2M11 9.4h2M15 9.4h2M7 12.8h2M11 12.8h6M7 16.2h10"/></svg></span>
-            <span class="step__n">03</span>
-            <h3 data-i18n="how.s3.h">Ievadi vērtības ierīcē</h3>
-            <p data-i18n="how.s3.p">Iekārtā atver «Scan to E-mail» un pārraksti serveri, portu, lietotāju un paroli. Portālā redzams, kas kurā laukā ietilpst. Vienu reizi — un pēc tam neaiztiec, ja vien nemaini ierīci vai nepieprasi jaunus piekļuves datus.</p>
-            <span class="step__t"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3 1.8"/></svg><span data-i18n="how.s3.t">~3 minūtes</span></span>
+            <span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="1.4"/><path d="M6.5 11h.01M9.5 11h.01M12.5 11h.01M15.5 11h.01M18 11h.01M7.5 14.2h9"/></svg></span>
+            <h3 data-i18n="how.s3.h">3. Ievadi vienu reizi</h3>
+            <p data-i18n="how.s3.p">Atver printera iestatījumus, ej uz to ekrānu, ko tev norādām, un ievadi to, ko esam uzrakstījuši. Vienu reizi, uz visiem laikiem — mazāk par piecām minūtēm arī pirmajā reizē.</p>
           </li>
           <li class="step">
-            <span class="step__ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.8" y="5.4" width="18.4" height="13.2"/><path d="M3.4 6.6 12 12.9l8.6-6.3"/></svg></span>
-            <span class="step__n">04</span>
-            <h3 data-i18n="how.s4.h">Skenē</h3>
-            <p data-i18n="how.s4.p">Nospied «Scan to E-mail», izvēlies adresi — un kamēr lapa iziet cauri padevējam, PDF jau ir pastkastē.</p>
-            <span class="step__t"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3 1.8"/></svg><span data-i18n="how.s4.t">mazāk par minūti</span></span>
+            <span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M4 13V6.5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1V13"/><path d="M4 13v4.5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V13"/></svg></span>
+            <h3 data-i18n="how.s4.h">4. Vienkārši skenē</h3>
+            <p data-i18n="how.s4.p">Nospied Scan to Email, izvēlies savu adresi, un brīdī, kad skenēšana beidzas, tas jau ir tavā pastkastē — automātiski arhivēts, vienmēr atrodams, mazāk par minūti vienam dokumentam.</p>
           </li>
         </ol>
 
+        <div class="cfg-flow" aria-hidden="true">
+          <span class="cfg-flow__step"><svg viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.4"/></svg><span data-i18n="flow.1">Tava bilde</span></span>
+          <span class="cfg-flow__arrow">&rarr;</span>
+          <span class="cfg-flow__step"><svg viewBox="0 0 24 24"><path d="M12 3v2.4M12 18.6V21M21 12h-2.4M5.4 12H3M18 6l-1.7 1.7M7.7 16.3 6 18M18 18l-1.7-1.7M7.7 7.7 6 6"/><circle cx="12" cy="12" r="3.6"/></svg><span data-i18n="flow.2">AI nolasa modeli</span></span>
+          <span class="cfg-flow__arrow">&rarr;</span>
+          <span class="cfg-flow__step"><svg viewBox="0 0 24 24"><path d="M5 12.5 9.5 17 19 7.5"/></svg><span data-i18n="flow.3">Konfigurācija zemāk</span></span>
+        </div>
         <div class="cfg">
           <div class="cfg__hd">
-            <b data-i18n="cfg.h">Ierīces piekļuves dati</b>
+            <b data-i18n="cfg.h">Ģenerētā konfigurācija</b>
             <span data-i18n="cfg.eg">piemērs</span>
           </div>
-          <div class="cfg__scroll" tabindex="0" role="group" aria-label="Ierīces piekļuves dati" data-i18n-aria="cfg.h">
+          <div class="cfg__scroll" tabindex="0" role="group" aria-label="Ģenerētā konfigurācija" data-i18n-aria="cfg.h">
             <table>
               <tbody>
-                <tr><th data-i18n="cfg.server">SMTP serveris</th><td>smtp.inbox.eu</td></tr>
-                <tr><th data-i18n="cfg.port">Ports</th><td>465 <em>SSL/TLS</em> &middot; 587 <em>STARTTLS</em></td></tr>
-                <tr><th data-i18n="cfg.auth">Autentifikācija</th><td data-i18n="cfg.on">Ieslēgta</td></tr>
-                <tr><th data-i18n="cfg.user">Lietotājs</th><td>dev-7f3a-vestibils</td></tr>
-                <tr><th data-i18n="cfg.from">Sūtītāja adrese</th><td>vestibils@scaninbox.eu</td></tr>
-                <tr><th data-i18n="cfg.att">Pielikums</th><td>PDF &middot; A4 &middot; 300 dpi</td></tr>
-                <tr><th data-i18n="cfg.size">Izmēra ierobežojums</th><td>20 MB</td></tr>
+                <tr><th data-i18n="cfg.r1">Printeris atpazīts</th><td data-i18n="cfg.v1">Canon imageRUNNER 2630i <em>(piemērs)</em></td></tr>
+                <tr><th data-i18n="cfg.r2">Atsevišķa adrese</th><td>ir2630i_registratura@scan.scaninbox.eu</td></tr>
+                <tr><th data-i18n="cfg.r3">Šifrēšana</th><td data-i18n="cfg.v3">SMTP pa TLS, ģenerēts automātiski</td></tr>
+                <tr><th data-i18n="cfg.r4">Pielikums</th><td data-i18n="cfg.v4">PDF &middot; katram skenējumam</td></tr>
+                <tr><th data-i18n="cfg.r5">Ko ievadi pats</th><td data-i18n="cfg.v5">Serveris, ports un šī adrese — neko citu</td></tr>
               </tbody>
             </table>
           </div>
-          <p class="cfg__ft" data-i18n="cfg.ft">Šīs ir piemēra vērtības. Portāls reālās ģenerē katrai ierīcei atsevišķi, tāpēc iekārta gaitenī nekad nenes paroli, kas atver vēl ko citu. Sūtītāja adrese ir uz mūsu domēna — sūtīšana sava domēna vārdā pirmajā versijā nav paredzēta.</p>
+          <p class="cfg__ft" data-i18n="cfg.ft">Šīs ir piemēra vērtības. ScanInbox reālās ģenerē katram printerim atsevišķi, tāpēc iekārta gaitenī nekad nenes piekļuves datus, kas atver vēl ko citu.</p>
         </div>
       </div>
     </div>
@@ -1204,7 +1250,7 @@ b,strong{font-weight:600}
       <div class="signup__body">
         <div class="signup__intro">
           <h2 data-i18n="signup.h2">Atstāj e-pastu — pārējais aizņem 20 sekundes</h2>
-          <p data-i18n="signup.p">Uzrakstīsim, kad ScanInbox būs gatavs. Pirmie 10 pieteikušies dabū gadu bez maksas vienai ierīcei. Pēc pieteikšanās pajautāsim trīs jautājumus par tavām iekārtām — atbildēt nav obligāti, bet tas nosaka, ko būvējam vispirms.</p>
+          <p data-i18n="signup.p">Uzrakstīsim, kad ScanInbox būs gatavs. Pirmie desmit pieteikušies dabū gadu bez maksas vienai ierīcei. Pēc pieteikšanās pajautāsim dažus jautājumus par tavām iekārtām — atbildēt nav obligāti, bet tieši tas nosaka, ko būvējam vispirms.</p>
         </div>
 
         <div class="signup__box">
@@ -1264,7 +1310,7 @@ b,strong{font-weight:600}
 
           <details>
             <summary><span data-i18n="faq.q5">Vai vajadzīgs IT speciālists?</span></summary>
-            <div class="faq__a"><p data-i18n="faq.a5">Nē. Jāprot atvērt iekārtas iestatījumi un jāpārraksta daži lauki no ekrāna uz ekrānu: serveris, ports, šifrēšana, lietotājs, parole un sūtītāja adrese. Portālā redzams, kā katrs lauks saucas konkrētajā izvēlnē. Ja tomēr neizdodas — atbildi uz mūsu vēstuli, un izejam cauri kopā.</p></div>
+            <div class="faq__a"><p data-i18n="faq.a5">Nē. Jāprot atvērt iekārtas iestatījumi un jāpārraksta serveris, ports un adrese, ko esam sagatavojuši — neko citu. Pamācībā redzams, kā katrs lauks saucas tieši tavā izvēlnē. Ja tomēr neizdodas — atbildi uz mūsu vēstuli, un izejam cauri kopā.</p></div>
           </details>
 
           <details>
@@ -1339,80 +1385,71 @@ b,strong{font-weight:600}
   <button class="dock__x" id="dockx" type="button" aria-label="Paslēpt šo pogu" data-i18n-aria="dock.hide">&times;</button>
 </div>
 
-<!-- ============================ the survey ============================ -->
-<div class="scrim" id="scrim" hidden>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-h" id="modal">
-    <div class="modal__hd">
-      <span class="modal__ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 9.5 17 19 7.5"/></svg></span>
-      <div>
-        <h2 id="modal-h" data-i18n="modal.h">Paldies — esi sarakstā</h2>
-        <p data-i18n="modal.p">Rakstīsim uz <code id="modal-mail"></code>, tiklīdz būs ko parādīt.</p>
-      </div>
-      <button class="modal__x" id="modal-x" type="button" aria-label="Aizvērt" data-i18n-aria="modal.close">&times;</button>
+<!-- ======================== the follow-up questions =======================
+     Lives here in the markup and is moved into whichever form was submitted,
+     so there is one copy of it rather than two that can drift apart. -->
+<div class="followup" id="followup" hidden>
+  <p class="fu__intro" data-i18n="fu.intro">Vai atbildēsi vēl uz dažiem jautājumiem? Pilnīgi neobligāti — piesit atbildi vai izlaid.</p>
+
+  <div class="fu__step" data-step="1">
+    <p class="fu__n" data-i18n="fu.n1">1. jautājums no 4</p>
+    <p class="fu__q" data-i18n="q1.h">Kas to lietotu?</p>
+    <div class="chips">
+            <button type="button" class="chip" data-q="segment" data-v="private" data-i18n="q1.o1">Es pats, mājās</button>
+            <button type="button" class="chip" data-q="segment" data-v="small" data-i18n="q1.o2">Mazs birojs, līdz 10 cilvēkiem</button>
+            <button type="button" class="chip" data-q="segment" data-v="medium" data-i18n="q1.o3">Uzņēmums, 10–100 cilvēku</button>
+            <button type="button" class="chip" data-q="segment" data-v="large" data-i18n="q1.o4">Liela organizācija vai iestāde</button>
     </div>
+    <button type="button" class="fu__skip" data-skip data-i18n="fu.skip">Izlaist pārējo</button>
+  </div>
 
-    <form id="survey">
-      <div class="modal__bd">
-        <p class="modal__ask" data-i18n="modal.ask"><b>Vai atbildēsi vēl uz trim jautājumiem?</b> Tie palīdz saprast, ko būvēt vispirms. Neviens nav obligāts — aizver logu, un pieteikums paliek spēkā.</p>
+  <div class="fu__step" data-step="2" hidden>
+    <p class="fu__n" data-i18n="fu.n2">2. jautājums no 4</p>
+    <p class="fu__q" data-i18n="q2.h">Cik ierīcēm?</p>
+    <div class="chips">
+            <button type="button" class="chip" data-q="devices" data-v="1">1</button>
+            <button type="button" class="chip" data-q="devices" data-v="2-5">2&ndash;5</button>
+            <button type="button" class="chip" data-q="devices" data-v="6-20">6&ndash;20</button>
+            <button type="button" class="chip" data-q="devices" data-v="20+">20+</button>
+    </div>
+    <button type="button" class="fu__skip" data-skip data-i18n="fu.skip">Izlaist pārējo</button>
+  </div>
 
-        <fieldset class="q">
-          <legend data-i18n="q1.h">Kas to lietotu?</legend>
-          <div class="chips">
-            <label class="chip"><input type="radio" name="segment" value="private"><span data-i18n="q1.o1">Es pats, mājās</span></label>
-            <label class="chip"><input type="radio" name="segment" value="small"><span data-i18n="q1.o2">Mazs birojs, līdz 10 cilvēkiem</span></label>
-            <label class="chip"><input type="radio" name="segment" value="medium"><span data-i18n="q1.o3">Uzņēmums, 10–100 cilvēku</span></label>
-            <label class="chip"><input type="radio" name="segment" value="large"><span data-i18n="q1.o4">Liela organizācija vai iestāde</span></label>
-          </div>
-        </fieldset>
-
-        <fieldset class="q">
-          <legend data-i18n="q2.h">Cik ierīcēm?</legend>
-          <div class="chips">
-            <label class="chip"><input type="radio" name="devices" value="1"><span>1</span></label>
-            <label class="chip"><input type="radio" name="devices" value="2-5"><span>2–5</span></label>
-            <label class="chip"><input type="radio" name="devices" value="6-20"><span>6–20</span></label>
-            <label class="chip"><input type="radio" name="devices" value="20+"><span>20+</span></label>
-          </div>
-        </fieldset>
-
-        <fieldset class="q">
-          <legend data-i18n="q3.h">Kāda zīmola iekārtas tev ir?<span>vari atzīmēt vairākas</span></legend>
-          <div class="chips">
-            <label class="chip"><input type="checkbox" name="brands" value="canon"><span>Canon</span></label>
-            <label class="chip"><input type="checkbox" name="brands" value="hp"><span>HP</span></label>
-            <label class="chip"><input type="checkbox" name="brands" value="brother"><span>Brother</span></label>
-            <label class="chip"><input type="checkbox" name="brands" value="epson"><span>Epson</span></label>
-            <label class="chip"><input type="checkbox" name="brands" value="kyocera"><span>Kyocera</span></label>
-            <label class="chip"><input type="checkbox" name="brands" value="xerox"><span>Xerox</span></label>
-            <label class="chip"><input type="checkbox" name="brands" value="ricoh"><span>Ricoh</span></label>
-            <label class="chip"><input type="checkbox" name="brands" value="konica"><span>Konica Minolta</span></label>
-            <label class="chip"><input type="checkbox" name="brands" value="lexmark"><span>Lexmark</span></label>
-            <label class="chip"><input type="checkbox" name="brands" value="sharp"><span>Sharp</span></label>
-            <label class="chip"><input type="checkbox" name="brands" value="other"><span data-i18n="q3.other">Cits</span></label>
-            <label class="chip"><input type="checkbox" name="brands" value="unknown"><span data-i18n="q3.unknown">Nezinu</span></label>
-          </div>
-        </fieldset>
-
-        <div class="q">
-          <label class="q__lg" for="model" data-i18n="q4.h">Modelis, ja zini <span>neobligāti</span></label>
-          <input class="q__in" id="model" name="model" type="text" maxlength="120" placeholder="Piem. Canon MF445dw" data-i18n-ph="q4.ph">
-        </div>
-
-        <p class="note" id="survey-msg" role="status"></p>
-      </div>
-
-      <div class="modal__ft">
-        <button class="btn btn--go" id="survey-go" type="submit" data-i18n="modal.send">Nosūtīt atbildes</button>
-        <button class="btn btn--ghost" id="survey-skip" type="button" data-i18n="modal.skip">Varbūt vēlāk</button>
-      </div>
-    </form>
-
-    <div class="done" id="survey-done" hidden>
-      <h2 data-i18n="modal.done.h">Paldies — tas mums daudz palīdz</h2>
-      <p data-i18n="modal.done.p">Atbildes saglabātas. Rakstīsim, tiklīdz būs ko parādīt.</p>
-      <button class="btn btn--flat" id="survey-close" type="button" data-i18n="modal.done.btn">Aizvērt</button>
+  <div class="fu__step" data-step="3" hidden>
+    <p class="fu__n" data-i18n="fu.n3">3. jautājums no 4</p>
+    <p class="fu__q" data-i18n="q3.h">Kāda zīmola iekārtas tev ir? <span>vari atzīmēt vairākas</span></p>
+    <div class="chips">
+            <button type="button" class="chip" data-q="brands" data-v="canon">Canon</button>
+            <button type="button" class="chip" data-q="brands" data-v="hp">HP</button>
+            <button type="button" class="chip" data-q="brands" data-v="brother">Brother</button>
+            <button type="button" class="chip" data-q="brands" data-v="epson">Epson</button>
+            <button type="button" class="chip" data-q="brands" data-v="kyocera">Kyocera</button>
+            <button type="button" class="chip" data-q="brands" data-v="xerox">Xerox</button>
+            <button type="button" class="chip" data-q="brands" data-v="ricoh">Ricoh</button>
+            <button type="button" class="chip" data-q="brands" data-v="konica">Konica Minolta</button>
+            <button type="button" class="chip" data-q="brands" data-v="lexmark">Lexmark</button>
+            <button type="button" class="chip" data-q="brands" data-v="sharp">Sharp</button>
+            <button type="button" class="chip" data-q="brands" data-v="other" data-i18n="q3.other">Cits</button>
+            <button type="button" class="chip" data-q="brands" data-v="unknown" data-i18n="q3.unknown">Nezinu</button>
+    </div>
+    <div class="fu__row">
+      <button type="button" class="btn btn--flat btn--sm" data-next data-i18n="fu.next">Tālāk</button>
+      <button type="button" class="fu__skip" data-skip data-i18n="fu.skip">Izlaist pārējo</button>
     </div>
   </div>
+
+  <div class="fu__step" data-step="4" hidden>
+    <p class="fu__n" data-i18n="fu.n4">4. jautājums no 4</p>
+    <p class="fu__q" data-i18n="q4.h">Modelis, ja zini <span>neobligāti</span></p>
+    <div class="fu__row">
+      <label class="sr" for="fu-model" data-i18n="q4.h">Modelis, ja zini</label>
+      <input class="fu__in" id="fu-model" type="text" maxlength="120" placeholder="Piem. Canon MF445dw" data-i18n-ph="q4.ph">
+      <button type="button" class="btn btn--flat btn--sm" data-next data-i18n="fu.send">Nosūtīt</button>
+    </div>
+    <button type="button" class="fu__skip" data-skip data-i18n="fu.skip">Izlaist</button>
+  </div>
+
+  <p class="fu__done" hidden data-i18n="fu.done">Paldies — tieši tas palīdz saprast, ko būvēt vispirms.</p>
 </div>
 
 <!-- I18N:BEGIN -->
@@ -1455,7 +1492,7 @@ window.SCANINBOX_I18N = {
   "anim.old2": "Scanner — Accounting",
   "anim.f3": "Delivery_note_2026-0407.pdf",
   "anim.sz3": "2.4 MB",
-  "fig.cap": "<b>Fig. 1</b> — The device authenticates on the SMTP server with its own credentials and sends the PDF to the address you gave. Type your e-mail into the form and the animation will show it.",
+  "fig.cap": "<b>Fig. 1</b> — The device authenticates on the SMTP server with its own credentials and sends the PDF to the address you gave. Type your e-mail into the form and the mail in the animation will fly to it.",
   "m1v": "~5 min",
   "m1": "one-time setup",
   "m2v": "&lt; 1 min",
@@ -1466,7 +1503,7 @@ window.SCANINBOX_I18N = {
   "m4": "per device per year, VAT included",
   "rail.who": "Who it’s for",
   "who.h2": "Which one are you",
-  "who.lede": "Scanning to e-mail is already built into almost every office machine. It does not work because you first have to find a mail server, a port, a user name and a password. Pick the situation that sounds like yours.",
+  "who.lede": "Scanning to e-mail is already built into almost every office machine. The only thing stopping it is that somebody has to find a mail server, a port, a user name and a password first. Pick the situation that sounds like yours.",
   "who.t1": "At home",
   "who.t2": "In the office",
   "who.t3": "Microsoft 365 blocks it",
@@ -1490,31 +1527,31 @@ window.SCANINBOX_I18N = {
   "who.p4.b": "Add the new device to the account and get new credentials for it. The address the scans arrive at stays the same — only the hardware under it changes.",
   "who.p4.o": "Nothing has to be remembered from last time and nothing has to be carried over by hand.",
   "rail.how": "How it works",
-  "how.h2": "Four steps, once per device",
-  "how.lede": "One setup. After that scanning simply works — even when the machine is restarted, and even when the people in the office change.",
-  "how.s1.h": "Create an account",
-  "how.s1.p": "With the e-mail address where you want to receive the scans. No company registration number and no call with a salesperson.",
-  "how.s1.t": "~30 seconds",
-  "how.s2.h": "Add a device",
-  "how.s2.p": "Name it the way people in the building call it — Reception, 3rd floor, Accounts. The portal immediately issues that machine its own SMTP credentials.",
-  "how.s2.t": "~1 minute",
-  "how.s3.h": "Enter the values on the device",
-  "how.s3.p": "On the machine, open “Scan to E-mail” and copy across the server, the port, the user name and the password. The portal shows what goes in each field. Once — and after that leave it alone, unless you change the device or ask for new credentials.",
-  "how.s3.t": "~3 minutes",
-  "how.s4.h": "Scan",
-  "how.s4.p": "Press “Scan to E-mail”, pick the address — and while the page runs through the feeder, the PDF is already in the mailbox.",
-  "how.s4.t": "under a minute",
-  "cfg.h": "Device credentials",
+  "how.h2": "From buying a printer to a working digital habit",
+  "how.lede": "Most people meet this problem the same way: they buy or inherit a printer, notice it already claims to do Scan-to-Email, and then get stuck on the SMTP screen. ScanInbox skips straight from “I have a printer” to “it emails me the scan” — one guided setup, then it just works, for as long as you own the device.",
+  "how.s1.h": "1. Photograph your printer",
+  "how.s1.p": "Snap a picture of your printer. Our AI works out the exact model — no fixed list, we try every printer.",
+  "how.s2.h": "2. Get your config, instantly",
+  "how.s2.p": "We detect your printer’s model, generate the matching SMTP settings, and create a dedicated email address for it — plus a walkthrough of exactly where to enter the config on your printer. Can’t identify your model confidently? We show the generic settings screen instead.",
+  "how.s3.h": "3. Enter it once",
+  "how.s3.p": "Open your printer’s settings, go to the exact screen we point you to, and enter what we’ve written for you. One time, ever — under five minutes even the first time.",
+  "how.s4.h": "4. Just scan",
+  "how.s4.p": "Press Scan to Email, pick your address, and by the time the scan finishes it’s already in your inbox — automatically archived, always searchable, in under a minute per document.",
+  "flow.1": "Your photo",
+  "flow.2": "AI reads the model",
+  "flow.3": "Config generated below",
+  "cfg.h": "Generated configuration",
   "cfg.eg": "example",
-  "cfg.server": "SMTP server",
-  "cfg.port": "Port",
-  "cfg.auth": "Authentication",
-  "cfg.on": "On",
-  "cfg.user": "User",
-  "cfg.from": "From address",
-  "cfg.att": "Attachment",
-  "cfg.size": "Size limit",
-  "cfg.ft": "These are example values. The portal generates the real ones separately for each device, so the machine in the corridor never carries a password that opens anything else. The From address is on our domain — sending under your own domain is not planned for the first version.",
+  "cfg.r1": "Printer identified",
+  "cfg.v1": "Canon imageRUNNER 2630i <em>(example)</em>",
+  "cfg.r2": "Dedicated address",
+  "cfg.r3": "Encryption",
+  "cfg.v3": "SMTP over TLS, generated automatically",
+  "cfg.r4": "Attachment",
+  "cfg.v4": "PDF &middot; per scan",
+  "cfg.r5": "What you type in",
+  "cfg.v5": "Server, port, and this address — nothing else",
+  "cfg.ft": "These are example values. ScanInbox generates the real ones per printer, so a device in a hallway never carries credentials that open anything else.",
   "rail.price": "Price",
   "price.h2": "One price per device, per year",
   "price.unit": "per device per year, VAT included",
@@ -1523,20 +1560,20 @@ window.SCANINBOX_I18N = {
   "price.offer.p": "The first ten sign-ups — in the order they sign up — get one device free for a year from the launch date. No card to enter. After that year the charge does not start by itself: we will write and ask first.",
   "price.incl.h": "Included in the price",
   "price.i1": "<em>Separate credentials</em> for each device — switch one off, the rest keep working.",
-  "price.i2": "<em>No page limit</em> for ordinary office use. The attachment in one e-mail — up to 20 MB; the device will not send a larger one and will say so.",
+  "price.i2": "<em>No page limit</em> for ordinary office use. One attachment per e-mail, up to 20 MB; the device will not send a larger one and will say so.",
   "price.i3": "<em>On our side the data stays in the EU</em> — the relaying happens on inbox.eu infrastructure in the European Union, in line with the GDPR. Where the scan goes after that is decided by the mailbox you choose.",
   "price.i4": "<em>Machines with SMTP authentication and TLS</em> — in practice most office models from Canon, HP, Brother, Epson, Kyocera, Xerox, Ricoh, Konica Minolta, Lexmark and Sharp.",
   "price.later": "<span class=\"tag\">later</span> A scan log and delivery confirmations.",
   "price.note": "This is the planned price, and the service cannot be bought yet. Before we launch we will write to everyone who has signed up — including if the price turns out to need changing.",
   "rail.signup": "Sign up",
   "signup.h2": "Leave your e-mail — the rest takes 20 seconds",
-  "signup.p": "We will write when ScanInbox is ready. The first 10 sign-ups get a year free for one device. After you sign up we ask three questions about your machines — answering is optional, but it decides what we build first.",
+  "signup.p": "We will write when ScanInbox is ready. The first ten sign-ups get a year free for one device. After you sign up we ask a few questions about your machines — answering is optional, but it is what decides which machines we support first.",
   "assure.1": "About ScanInbox only — no newsletters and no advertising.",
   "assure.2": "Your address does not go to anyone else.",
   "rail.faq": "FAQ",
   "faq.h2": "Before you ask",
   "faq.q0": "What is ScanInbox?",
-  "faq.a0": "A service that gives your scanner or multifunction printer its own SMTP credentials. The machine already has a “Scan to E-mail” button — what is missing is a mail server that will accept it. Enter the values once, and from then on every scan goes to the address you choose, with no PC in between.",
+  "faq.a0": "A service that gives your scanner or multifunction printer its own SMTP credentials. The machine already has a “Scan to E-mail” button — what is missing is a mail server that will accept what it sends. Enter the values once, and from then on every scan goes to the address you choose, with no PC in between.",
   "faq.q1": "When will ScanInbox launch?",
   "faq.a1": "We are building the first version now and expect to launch within the next few months. We will not promise an exact date until we are sure we can hold to it — which is why this page collects sign-ups first. Everyone who signs up gets an e-mail before launch, and the first ten get a year free.",
   "faq.q2": "Do I have to buy a new scanner?",
@@ -1546,7 +1583,7 @@ window.SCANINBOX_I18N = {
   "faq.q4": "Do I need a static IP address or an open port 25?",
   "faq.a4": "No. The device connects to our server itself, on port 465 or 587, with a user name and a password. This works behind an ordinary home or office internet connection, including one with a dynamic IP address.",
   "faq.q5": "Do I need an IT specialist?",
-  "faq.a5": "No. You need to be able to open the machine’s settings and copy a few fields from one screen to another: the server, the port, the encryption, the user name, the password and the From address. The portal shows what each field is called in that particular menu. If it still does not work — reply to our e-mail and we will go through it together.",
+  "faq.a5": "No. You need to be able to open the machine’s settings and copy across the server, the port and the address we have prepared — nothing else. The walkthrough shows what each field is called in your own menu. If it still will not work, reply to our e-mail and we will go through it together.",
   "faq.q6": "What happens to my documents?",
   "faq.a6": "They travel over an encrypted connection from the device to our server and on to your address; on our side that happens on inbox.eu infrastructure in the European Union, in line with the GDPR. No person reads them, and we do not use the content for anything else. The only thing that happens to the e-mail on the way is an automatic malware and spam check.",
   "faq.q7": "Can I receive scans at Gmail or at a work address?",
@@ -1565,31 +1602,31 @@ window.SCANINBOX_I18N = {
   "faq.a12": "We keep your address, the page language and the answers you give voluntarily after signing up, for one purpose: to tell you about ScanInbox and to understand what to build first. We do not keep your IP address or browser data at all. No other mail, no advertising, and we give it to nobody else. We keep it until launch and for no longer than 24 months. Reply “no” to any e-mail from us and we delete the address and the answers within a few working days.",
   "foot.id": "<b>ScanInbox</b> — an inbox.eu service in development.",
   "foot.note": "This page exists to find out whether the product is needed. The service is not available yet, and nothing here can be bought. Manufacturer names are the trademarks of their owners; ScanInbox is not affiliated with them.",
-  "modal.h": "Thank you — you are on the list",
-  "modal.p": "We will write to <code id=\"modal-mail\"></code> as soon as there is something to show.",
-  "modal.ask": "<b>Will you answer three more questions?</b> They help us understand what to build first. None of them is required — close the window and your sign-up still stands.",
+  "fu.intro": "Would you answer a few more questions? Entirely optional — tap an answer, or skip.",
+  "fu.n1": "Question 1 of 4",
   "q1.h": "Who would use it?",
   "q1.o1": "Me, at home",
   "q1.o2": "Small office, up to 10 people",
   "q1.o3": "Company, 10–100 people",
   "q1.o4": "Large organisation or institution",
+  "fu.skip": "Skip the rest",
+  "fu.n2": "Question 2 of 4",
   "q2.h": "For how many devices?",
-  "q3.h": "Which brands do you have?<span>you can tick several</span>",
+  "fu.n3": "Question 3 of 4",
+  "q3.h": "What brand of machines do you have? <span>you can tick more than one</span>",
   "q3.other": "Other",
   "q3.unknown": "Don’t know",
+  "fu.next": "Next",
+  "fu.n4": "Question 4 of 4",
   "q4.h": "Model, if you know it <span>optional</span>",
-  "modal.send": "Send answers",
-  "modal.skip": "Maybe later",
-  "modal.done.h": "Thank you — that helps us a lot",
-  "modal.done.p": "Your answers are saved. We will write as soon as there is something to show.",
-  "modal.done.btn": "Close",
+  "fu.send": "Send",
+  "fu.done": "Thank you — that is exactly what tells us what to build first.",
   "form.ph": "you@example.com",
   "q4.ph": "e.g. Canon MF445dw",
   "nav.aria": "Sections",
   "theme.aria": "Switch between light and dark mode",
   "m.aria": "Numbers",
   "dock.hide": "Hide this button",
-  "modal.close": "Close",
   "msg.badEmail": "Enter a valid e-mail address.",
   "msg.consent": "To sign up, tick the consent box.",
   "msg.sending": "Sending…",
@@ -1636,7 +1673,7 @@ window.SCANINBOX_I18N = {
   "anim.old2": "Scanner — Contabilità",
   "anim.f3": "Bolla_2026-0407.pdf",
   "anim.sz3": "2,4 MB",
-  "fig.cap": "<b>Fig. 1</b> — Il dispositivo si autentica sul server SMTP con le proprie credenziali e invia il PDF all'indirizzo che hai indicato. Scrivi la tua e-mail nel modulo e l'animazione la mostrerà.",
+  "fig.cap": "<b>Fig. 1</b> — Il dispositivo si autentica sul server SMTP con le proprie credenziali e invia il PDF all’indirizzo che hai indicato. Scrivi la tua e-mail nel modulo e nell’animazione la lettera volerà lì.",
   "m1v": "~5 min",
   "m1": "configurazione una tantum",
   "m2v": "&lt; 1 min",
@@ -1647,7 +1684,7 @@ window.SCANINBOX_I18N = {
   "m4": "all'anno per dispositivo, IVA inclusa",
   "rail.who": "A chi serve",
   "who.h2": "In quale di questi ti riconosci",
-  "who.lede": "La scansione verso e-mail è già integrata in quasi ogni macchina da ufficio. Non funziona perché da qualche parte bisogna trovare il server di posta, la porta, l'utente e la password. Scegli la situazione che somiglia alla tua.",
+  "who.lede": "La scansione verso e-mail è già integrata in quasi ogni macchina da ufficio. Non funziona solo perché da qualche parte bisogna trovare il server di posta, la porta, l’utente e la password. Scegli la situazione che somiglia alla tua.",
   "who.t1": "A casa",
   "who.t2": "In ufficio",
   "who.t3": "Microsoft 365 blocca",
@@ -1671,37 +1708,37 @@ window.SCANINBOX_I18N = {
   "who.p4.b": "Aggiungi il nuovo dispositivo all'account e ricevi credenziali nuove. L'indirizzo a cui arrivano le scansioni resta lo stesso: cambia solo la macchina che c'è sotto.",
   "who.p4.o": "Non c'è niente da ricordare della volta precedente e niente da ricopiare a mano.",
   "rail.how": "Come funziona",
-  "how.h2": "Quattro passaggi, una volta per dispositivo",
-  "how.lede": "Una configurazione sola. Dopo, la scansione funziona e basta: anche quando la macchina viene riavviata, anche quando in ufficio cambiano le persone.",
-  "how.s1.h": "Crea un account",
-  "how.s1.p": "Con l'e-mail su cui vuoi ricevere le scansioni. Senza partita IVA e senza parlare con un commerciale.",
-  "how.s1.t": "~30 secondi",
-  "how.s2.h": "Aggiungi il dispositivo",
-  "how.s2.p": "Chiamalo come lo chiamano le persone nell'edificio: Reception, 3° piano, Contabilità. Il portale genera subito le credenziali SMTP di quella macchina.",
-  "how.s2.t": "~1 minuto",
-  "how.s3.h": "Inserisci i valori nel dispositivo",
-  "how.s3.p": "Sulla macchina apri «Scan to E-mail» e ricopia server, porta, utente e password. Il portale mostra che cosa va in ciascun campo. Una volta sola — e poi non lo tocchi più, a meno che tu non cambi dispositivo o richieda nuove credenziali.",
-  "how.s3.t": "~3 minuti",
-  "how.s4.h": "Scansiona",
-  "how.s4.p": "Premi «Scan to E-mail», scegli l'indirizzo: mentre il foglio passa nell'alimentatore, il PDF è già nella casella di posta.",
-  "how.s4.t": "meno di un minuto",
-  "cfg.h": "Credenziali del dispositivo",
+  "how.h2": "Dall’acquisto di una stampante a un’abitudine digitale che funziona",
+  "how.lede": "Quasi tutti incontrano questo problema allo stesso modo: comprano o ereditano una stampante, notano che dichiara già di fare Scan-to-Email e poi si bloccano sulla schermata SMTP. ScanInbox salta dritto da «ho una stampante» a «mi manda la scansione via e-mail»: una configurazione guidata, e poi funziona e basta, finché la macchina è tua.",
+  "how.s1.h": "1. Fotografa la tua stampante",
+  "how.s1.p": "Scatta una foto della stampante. La nostra AI ricava il modello esatto: nessun elenco fisso, proviamo con qualsiasi stampante.",
+  "how.s2.h": "2. Ricevi subito la configurazione",
+  "how.s2.p": "Riconosciamo il modello della tua stampante, generiamo le impostazioni SMTP corrispondenti e creiamo un indirizzo e-mail dedicato — più una guida su dove inserire esattamente la configurazione sulla stampante. Non riusciamo a identificare il modello con certezza? Allora mostriamo la schermata delle impostazioni generiche.",
+  "how.s3.h": "3. Inseriscila una volta sola",
+  "how.s3.p": "Apri le impostazioni della stampante, vai alla schermata che ti indichiamo e inserisci quello che abbiamo scritto per te. Una volta sola, per sempre: meno di cinque minuti anche la prima volta.",
+  "how.s4.h": "4. Scansiona e basta",
+  "how.s4.p": "Premi Scan to Email, scegli il tuo indirizzo e, quando la scansione finisce, è già nella tua casella di posta: archiviata automaticamente, sempre ricercabile, in meno di un minuto a documento.",
+  "flow.1": "La tua foto",
+  "flow.2": "L’AI legge il modello",
+  "flow.3": "Configurazione qui sotto",
+  "cfg.h": "Configurazione generata",
   "cfg.eg": "esempio",
-  "cfg.server": "Server SMTP",
-  "cfg.port": "Porta",
-  "cfg.auth": "Autenticazione",
-  "cfg.on": "Attiva",
-  "cfg.user": "Utente",
-  "cfg.from": "Indirizzo mittente",
-  "cfg.att": "Allegato",
-  "cfg.size": "Limite di dimensione",
-  "cfg.ft": "Questi sono valori di esempio. Il portale genera quelli reali separatamente per ogni dispositivo, così la macchina in corridoio non porta mai una password che apre anche qualcos'altro. L'indirizzo del mittente è sul nostro dominio: l'invio a nome di un dominio tuo non è previsto nella prima versione.",
+  "cfg.r1": "Stampante identificata",
+  "cfg.v1": "Canon imageRUNNER 2630i <em>(esempio)</em>",
+  "cfg.r2": "Indirizzo dedicato",
+  "cfg.r3": "Cifratura",
+  "cfg.v3": "SMTP su TLS, generata automaticamente",
+  "cfg.r4": "Allegato",
+  "cfg.v4": "PDF &middot; per ogni scansione",
+  "cfg.r5": "Quello che inserisci tu",
+  "cfg.v5": "Server, porta e questo indirizzo — nient’altro",
+  "cfg.ft": "Questi sono valori di esempio. ScanInbox genera quelli reali per ogni stampante, così la macchina in corridoio non porta mai credenziali che aprono qualcos’altro.",
   "rail.price": "Prezzo",
   "price.h2": "Un prezzo per dispositivo, all'anno",
   "price.unit": "all'anno per dispositivo, IVA inclusa",
   "price.sub": "Un solo prezzo, indipendentemente da quante pagine scansioni. Paghi per ogni dispositivo aggiunto, per quelli non aggiunti non paghi.",
   "price.offer.h": "Ai primi 10 — un anno gratis",
-  "price.offer.p": "I primi dieci iscritti — in ordine di iscrizione — ricevono un dispositivo gratis per un anno dal giorno del lancio. Non serve indicare una carta. Dopo l'anno il pagamento non parte da solo: prima ti scriviamo e te lo chiediamo.",
+  "price.offer.p": "I primi dieci iscritti, in ordine di iscrizione, ricevono un dispositivo gratis per un anno dal giorno del lancio. Non serve indicare una carta. Dopo l’anno il pagamento non parte da solo: prima ti scriviamo e te lo chiediamo.",
   "price.incl.h": "Il prezzo comprende",
   "price.i1": "<em>Credenziali separate</em> per ogni dispositivo — ne disattivi uno, gli altri continuano a funzionare.",
   "price.i2": "<em>Nessun limite di pagine</em> per il normale uso in ufficio. L'allegato di una singola e-mail arriva fino a 20 MB; se è più grande, il dispositivo non lo invia e lo segnala.",
@@ -1711,7 +1748,7 @@ window.SCANINBOX_I18N = {
   "price.note": "Il prezzo è quello previsto e il servizio non è ancora acquistabile. Prima del lancio contatteremo tutti gli iscritti, anche se dovesse risultare che il prezzo va cambiato.",
   "rail.signup": "Iscrizione",
   "signup.h2": "Lascia la tua e-mail — il resto sono 20 secondi",
-  "signup.p": "Ti scriveremo quando ScanInbox sarà pronto. I primi 10 iscritti ottengono un anno gratis per un dispositivo. Dopo l'iscrizione ti faremo tre domande sulle tue macchine: rispondere non è obbligatorio, ma è così che decidiamo che cosa costruire per primo.",
+  "signup.p": "Ti scriveremo quando ScanInbox sarà pronto. I primi dieci iscritti ottengono un anno gratis per un dispositivo. Dopo l’iscrizione ti faremo qualche domanda sulle tue macchine: rispondere non è obbligatorio, ma è così che decidiamo quali macchine supportare per prime.",
   "assure.1": "Solo su ScanInbox — niente newsletter e niente pubblicità.",
   "assure.2": "Il tuo indirizzo non lo riceve nessun altro.",
   "rail.faq": "FAQ",
@@ -1727,7 +1764,7 @@ window.SCANINBOX_I18N = {
   "faq.q4": "Serve un indirizzo IP statico o la porta 25 aperta?",
   "faq.a4": "No. È il dispositivo a collegarsi al nostro server sulla porta 465 o 587 con nome utente e password. Funziona dietro una normale connessione internet di casa o d'ufficio, anche con indirizzo IP dinamico.",
   "faq.q5": "Serve un tecnico IT?",
-  "faq.a5": "No. Bisogna saper aprire le impostazioni della macchina e ricopiare qualche campo da uno schermo all'altro: server, porta, cifratura, utente, password e indirizzo del mittente. Il portale mostra come si chiama ogni campo in quel preciso menu. Se comunque non ci riesci, rispondi a una nostra e-mail e lo facciamo insieme.",
+  "faq.a5": "No. Devi saper aprire le impostazioni della macchina e ricopiare il server, la porta e l’indirizzo che abbiamo preparato: nient’altro. La guida mostra come si chiama ogni campo nel tuo menu. Se comunque non ci riesci, rispondi a una nostra e-mail e lo facciamo insieme.",
   "faq.q6": "Che cosa succede ai miei documenti?",
   "faq.a6": "Viaggiano su una connessione cifrata dal dispositivo al nostro server e da lì al tuo indirizzo; dalla nostra parte questo avviene sull'infrastruttura inbox.eu nell'Unione Europea, in conformità al GDPR. Nessuna persona li legge e il contenuto non lo usiamo per nient'altro. L'unica cosa che succede all'e-mail lungo il percorso è un controllo automatico antimalware e antispam.",
   "faq.q7": "Posso ricevere le scansioni su Gmail o sull'indirizzo di lavoro?",
@@ -1746,31 +1783,31 @@ window.SCANINBOX_I18N = {
   "faq.a12": "Conserviamo il tuo indirizzo, la lingua della pagina e le risposte che dai volontariamente dopo l'iscrizione, per un solo scopo: raccontarti di ScanInbox e capire che cosa costruire per primo. L'indirizzo IP e i dati del browser non li conserviamo affatto. Non li usiamo per altre e-mail né per pubblicità e non li diamo a nessun altro. Li conserviamo fino al lancio e non oltre 24 mesi. Rispondi «no» a una qualsiasi nostra e-mail e nel giro di pochi giorni lavorativi cancelliamo l'indirizzo e le risposte.",
   "foot.id": "<b>ScanInbox</b> — un servizio inbox.eu in sviluppo.",
   "foot.note": "Questa pagina esiste per capire se il prodotto serve. Il servizio non è ancora disponibile e qui non si può acquistare nulla. I nomi dei produttori sono marchi dei rispettivi proprietari; ScanInbox non è collegato a loro.",
-  "modal.h": "Grazie — sei nella lista",
-  "modal.p": "Ti scriveremo a <code id=\"modal-mail\"></code> appena avremo qualcosa da mostrare.",
-  "modal.ask": "<b>Rispondi ad altre tre domande?</b> Aiutano a capire che cosa costruire per primo. Nessuna è obbligatoria — chiudi la finestra e l'iscrizione resta valida.",
+  "fu.intro": "Rispondi ancora a qualche domanda? Del tutto facoltativo: tocca una risposta oppure salta.",
+  "fu.n1": "Domanda 1 di 4",
   "q1.h": "Chi lo userebbe?",
   "q1.o1": "Io, a casa",
   "q1.o2": "Piccolo ufficio, max 10 persone",
   "q1.o3": "Azienda, 10–100 persone",
   "q1.o4": "Grande organizzazione o ente",
+  "fu.skip": "Salta il resto",
+  "fu.n2": "Domanda 2 di 4",
   "q2.h": "Per quanti dispositivi?",
-  "q3.h": "Di che marca sono le tue macchine?<span>puoi selezionarne più di una</span>",
+  "fu.n3": "Domanda 3 di 4",
+  "q3.h": "Che marca di macchine hai? <span>puoi sceglierne più di una</span>",
   "q3.other": "Altro",
   "q3.unknown": "Non lo so",
+  "fu.next": "Avanti",
+  "fu.n4": "Domanda 4 di 4",
   "q4.h": "Modello, se lo sai <span>facoltativo</span>",
-  "modal.send": "Invia le risposte",
-  "modal.skip": "Magari più tardi",
-  "modal.done.h": "Grazie — ci aiuta molto",
-  "modal.done.p": "Risposte salvate. Ti scriveremo appena avremo qualcosa da mostrare.",
-  "modal.done.btn": "Chiudi",
+  "fu.send": "Invia",
+  "fu.done": "Grazie — è proprio questo che ci dice cosa costruire per primo.",
   "form.ph": "tu@esempio.it",
   "q4.ph": "Es. Canon MF445dw",
   "nav.aria": "Sezioni",
   "theme.aria": "Cambia modalità chiara o scura",
   "m.aria": "Numeri",
   "dock.hide": "Nascondi questo pulsante",
-  "modal.close": "Chiudi",
   "msg.badEmail": "Inserisci un indirizzo e-mail valido.",
   "msg.consent": "Per iscriverti devi dare il consenso al contatto.",
   "msg.sending": "Invio in corso…",
@@ -1817,7 +1854,7 @@ window.SCANINBOX_I18N = {
   "anim.old2": "Scanner — Comptabilité",
   "anim.f3": "Bon_livraison_2026-0407.pdf",
   "anim.sz3": "2,4 MB",
-  "fig.cap": "<b>Fig. 1</b> — L’appareil s’authentifie auprès du serveur SMTP avec ses propres identifiants et envoie le PDF à l’adresse que vous avez indiquée. Saisissez votre adresse dans le formulaire : l’animation l’affichera.",
+  "fig.cap": "<b>Fig. 1</b> — L’appareil s’authentifie auprès du serveur SMTP avec ses propres identifiants et envoie le PDF à l’adresse que vous avez indiquée. Saisissez votre adresse dans le formulaire : dans l’animation, le message partira vers elle.",
   "m1v": "~5 min",
   "m1": "une seule configuration",
   "m2v": "&lt; 1 min",
@@ -1828,7 +1865,7 @@ window.SCANINBOX_I18N = {
   "m4": "par appareil et par an, TVA comprise",
   "rail.who": "Pour qui",
   "who.h2": "Lequel de ces cas est le vôtre ?",
-  "who.lede": "La numérisation vers e-mail est déjà intégrée à presque toutes les machines de bureau. Elle ne fonctionne pas parce qu’il faut trouver quelque part un serveur de messagerie, un port, un identifiant et un mot de passe. Choisissez la situation qui ressemble à la vôtre.",
+  "who.lede": "La numérisation vers e-mail est déjà intégrée à presque toutes les machines de bureau. Si elle ne fonctionne pas, c’est seulement parce qu’il faut d’abord trouver un serveur de messagerie, un port, un identifiant et un mot de passe. Choisissez la situation qui ressemble à la vôtre.",
   "who.t1": "À la maison",
   "who.t2": "Au bureau",
   "who.t3": "Microsoft 365 bloque",
@@ -1852,31 +1889,31 @@ window.SCANINBOX_I18N = {
   "who.p4.b": "Ajoutez le nouvel appareil au compte : il reçoit ses propres identifiants. L’adresse à laquelle arrivent les numérisations reste la même — seul le matériel dessous change.",
   "who.p4.o": "Rien à retenir de la fois précédente, rien à recopier à la main.",
   "rail.how": "Fonctionnement",
-  "how.h2": "Quatre étapes, une fois par appareil",
-  "how.lede": "Une seule configuration. Ensuite, la numérisation fonctionne — y compris après un redémarrage de la machine, y compris quand le personnel du bureau change.",
-  "how.s1.h": "Créez un compte",
-  "how.s1.p": "Avec l’adresse e-mail où vous voulez recevoir les numérisations. Sans numéro SIRET et sans passer par un commercial.",
-  "how.s1.t": "~30 secondes",
-  "how.s2.h": "Ajoutez l’appareil",
-  "how.s2.p": "Nommez-le comme l’appellent les gens du bâtiment : Accueil, 3e étage, Comptabilité. Le portail lui attribue aussitôt ses propres identifiants SMTP.",
-  "how.s2.t": "~1 minute",
-  "how.s3.h": "Saisissez les valeurs sur l’appareil",
-  "how.s3.p": "Sur la machine, ouvrez « Scan to E-mail » et recopiez le serveur, le port, l’identifiant et le mot de passe. Le portail indique ce qui va dans chaque champ. Une seule fois — et ensuite, vous n’y touchez plus, sauf si vous changez d’appareil ou demandez de nouveaux identifiants.",
-  "how.s3.t": "~3 minutes",
-  "how.s4.h": "Numérisez",
-  "how.s4.p": "Appuyez sur « Scan to E-mail », choisissez l’adresse — et le temps que la page passe dans le chargeur, le PDF est déjà dans la boîte mail.",
-  "how.s4.t": "moins d’une minute",
-  "cfg.h": "Identifiants de l’appareil",
+  "how.h2": "De l’achat d’une imprimante à une habitude numérique qui fonctionne",
+  "how.lede": "La plupart des gens rencontrent ce problème de la même façon : ils achètent ou héritent d’une imprimante, voient qu’elle annonce déjà le Scan-to-Email, puis restent bloqués devant l’écran SMTP. ScanInbox passe directement de « j’ai une imprimante » à « elle m’envoie la numérisation par e-mail » : une configuration guidée, et ensuite cela fonctionne, tant que la machine est à vous.",
+  "how.s1.h": "1. Photographiez votre imprimante",
+  "how.s1.p": "Prenez une photo de votre imprimante. Notre IA en déduit le modèle exact : pas de liste fermée, nous essayons avec toutes les imprimantes.",
+  "how.s2.h": "2. Recevez votre configuration, tout de suite",
+  "how.s2.p": "Nous reconnaissons le modèle de votre imprimante, générons les réglages SMTP correspondants et créons une adresse e-mail dédiée — ainsi qu’un guide indiquant exactement où saisir la configuration sur votre imprimante. Nous n’arrivons pas à identifier le modèle avec certitude ? Nous affichons alors l’écran de réglages générique.",
+  "how.s3.h": "3. Saisissez-la une seule fois",
+  "how.s3.p": "Ouvrez les réglages de votre imprimante, allez à l’écran exact que nous vous indiquons et saisissez ce que nous avons écrit pour vous. Une fois pour toutes : moins de cinq minutes, même la première fois.",
+  "how.s4.h": "4. Numérisez, tout simplement",
+  "how.s4.p": "Appuyez sur Scan to Email, choisissez votre adresse : le temps que la numérisation se termine, elle est déjà dans votre boîte mail — archivée automatiquement, toujours consultable, en moins d’une minute par document.",
+  "flow.1": "Votre photo",
+  "flow.2": "L’IA lit le modèle",
+  "flow.3": "Configuration ci-dessous",
+  "cfg.h": "Configuration générée",
   "cfg.eg": "exemple",
-  "cfg.server": "Serveur SMTP",
-  "cfg.port": "Port",
-  "cfg.auth": "Authentification",
-  "cfg.on": "Activée",
-  "cfg.user": "Nom d’utilisateur",
-  "cfg.from": "Adresse d’expéditeur",
-  "cfg.att": "Pièce jointe",
-  "cfg.size": "Taille maximale",
-  "cfg.ft": "Ce sont des valeurs d’exemple. Le portail génère les valeurs réelles séparément pour chaque appareil : la machine du couloir ne contient donc jamais un mot de passe qui ouvre autre chose. L’adresse d’expéditeur est sur notre domaine — l’envoi au nom de votre propre domaine n’est pas prévu dans la première version.",
+  "cfg.r1": "Imprimante identifiée",
+  "cfg.v1": "Canon imageRUNNER 2630i <em>(exemple)</em>",
+  "cfg.r2": "Adresse dédiée",
+  "cfg.r3": "Chiffrement",
+  "cfg.v3": "SMTP sur TLS, généré automatiquement",
+  "cfg.r4": "Pièce jointe",
+  "cfg.v4": "PDF &middot; par numérisation",
+  "cfg.r5": "Ce que vous saisissez",
+  "cfg.v5": "Le serveur, le port et cette adresse — rien d’autre",
+  "cfg.ft": "Ce sont des valeurs d’exemple. ScanInbox génère les vraies pour chaque imprimante, de sorte que la machine du couloir ne contient jamais d’identifiants qui ouvrent autre chose.",
   "rail.price": "Prix",
   "price.h2": "Un seul prix par appareil et par an",
   "price.unit": "par appareil et par an, TVA comprise",
@@ -1892,7 +1929,7 @@ window.SCANINBOX_I18N = {
   "price.note": "Ce prix est prévisionnel et le service n’est pas encore en vente. Avant le lancement, nous écrirons à tous les inscrits — y compris si le prix doit finalement changer.",
   "rail.signup": "Inscription",
   "signup.h2": "Laissez votre e-mail — le reste prend 20 secondes",
-  "signup.p": "Nous vous écrirons quand ScanInbox sera prêt. Les 10 premiers inscrits obtiennent un an gratuit pour un appareil. Après l’inscription, nous poserons trois questions sur vos machines — y répondre n’est pas obligatoire, mais cela détermine ce que nous construisons en premier.",
+  "signup.p": "Nous vous écrirons quand ScanInbox sera prêt. Les dix premiers inscrits obtiennent un an gratuit pour un appareil. Après l’inscription, nous poserons quelques questions sur vos machines — y répondre n’est pas obligatoire, mais c’est ce qui détermine quelles machines nous prenons en charge en premier.",
   "assure.1": "Uniquement au sujet de ScanInbox — ni newsletter ni publicité.",
   "assure.2": "Votre adresse n’est transmise à personne.",
   "rail.faq": "FAQ",
@@ -1908,7 +1945,7 @@ window.SCANINBOX_I18N = {
   "faq.q4": "Faut-il une adresse IP fixe ou le port 25 ouvert ?",
   "faq.a4": "Non. C’est l’appareil qui se connecte à notre serveur, sur le port 465 ou 587, avec un nom d’utilisateur et un mot de passe. Cela fonctionne derrière une connexion internet domestique ou professionnelle ordinaire, y compris avec une adresse IP dynamique.",
   "faq.q5": "Faut-il un informaticien ?",
-  "faq.a5": "Non. Il faut savoir ouvrir les réglages de la machine et recopier quelques champs d’un écran à l’autre : serveur, port, chiffrement, identifiant, mot de passe et adresse d’expéditeur. Le portail indique comment chaque champ s’appelle dans le menu concerné. Si cela ne fonctionne quand même pas — répondez à notre e-mail et nous le ferons ensemble.",
+  "faq.a5": "Non. Il faut savoir ouvrir les réglages de la machine et recopier le serveur, le port et l’adresse que nous avons préparés : rien d’autre. Le guide indique comment chaque champ s’appelle dans votre propre menu. Si cela ne fonctionne quand même pas, répondez à notre e-mail et nous le ferons ensemble.",
   "faq.q6": "Que deviennent mes documents ?",
   "faq.a6": "Ils circulent sur une connexion chiffrée de l’appareil vers notre serveur, puis vers votre adresse ; de notre côté, cela se passe sur l’infrastructure inbox.eu, dans l’Union européenne, conformément au RGPD. Personne ne les lit et nous n’utilisons leur contenu à aucune autre fin. La seule chose qui arrive au message en chemin, c’est un contrôle automatique contre les logiciels malveillants et le courrier indésirable.",
   "faq.q7": "Puis-je recevoir les numérisations sur Gmail ou sur mon adresse professionnelle ?",
@@ -1924,34 +1961,34 @@ window.SCANINBOX_I18N = {
   "faq.q13": "Un visiteur peut-il numériser lui aussi ?",
   "faq.a13": "Oui. L’adresse est saisie sur l’écran de l’appareil par la personne qui numérise : un client, un auditeur ou un collègue d’un autre service peut donc s’envoyer un document sans rien enregistrer à l’avance. La configuration se fait une seule fois — pour la machine elle-même, pas pour chaque personne.",
   "faq.q12": "Que faites-vous de mon adresse e-mail ?",
-  "faq.a12": "Nous conservons votre adresse, la langue de la page et les réponses que vous donnez volontairement après l’inscription, dans un seul but : vous parler de ScanInbox et comprendre quoi construire en premier. Nous ne conservons ni votre adresse IP ni les données de votre navigateur. Aucun autre message, aucune publicité, et nous ne les transmettons à personne. Nous les conservons jusqu’au lancement et pas plus de 24 mois. Répondez « non » à n’importe lequel de nos e-mails et, en quelques jours ouvrés, nous supprimons votre adresse et vos réponses.",
+  "faq.a12": "Nous conservons votre adresse, la langue de la page et les réponses que vous donnez volontairement après l’inscription, dans un seul but : vous parler de ScanInbox et comprendre quoi construire en premier. Nous ne conservons ni votre adresse IP ni les données de votre navigateur. Nous ne nous en servons pour aucun autre message ni pour de la publicité, et nous ne les transmettons à personne. Nous les conservons jusqu’au lancement et pas plus de 24 mois. Répondez « non » à n’importe lequel de nos e-mails et, en quelques jours ouvrés, nous supprimons votre adresse et vos réponses.",
   "foot.id": "<b>ScanInbox</b> — un service inbox.eu en développement.",
   "foot.note": "Cette page existe pour savoir si le produit est utile. Le service n’est pas encore disponible et rien ne peut être acheté ici. Les noms des fabricants sont des marques de leurs propriétaires respectifs ; ScanInbox n’y est pas affilié.",
-  "modal.h": "Merci — vous êtes sur la liste",
-  "modal.p": "Nous écrirons à <code id=\"modal-mail\"></code> dès que nous aurons quelque chose à montrer.",
-  "modal.ask": "<b>Voulez-vous répondre à trois questions de plus ?</b> Elles aident à comprendre quoi construire en premier. Aucune n’est obligatoire — fermez la fenêtre, votre inscription reste valable.",
+  "fu.intro": "Vous répondez encore à quelques questions ? Entièrement facultatif — touchez une réponse ou passez.",
+  "fu.n1": "Question 1 sur 4",
   "q1.h": "Qui l’utiliserait ?",
   "q1.o1": "Moi, à la maison",
   "q1.o2": "Petit bureau, 10 personnes max",
   "q1.o3": "Entreprise, 10–100 personnes",
   "q1.o4": "Grand groupe ou administration",
+  "fu.skip": "Passer le reste",
+  "fu.n2": "Question 2 sur 4",
   "q2.h": "Pour combien d’appareils ?",
-  "q3.h": "Quelles marques de machines avez-vous ?<span>plusieurs choix possibles</span>",
+  "fu.n3": "Question 3 sur 4",
+  "q3.h": "Quelles marques de machines avez-vous ? <span>vous pouvez en cocher plusieurs</span>",
   "q3.other": "Autre",
   "q3.unknown": "Je ne sais pas",
+  "fu.next": "Suivant",
+  "fu.n4": "Question 4 sur 4",
   "q4.h": "Modèle, si vous le connaissez <span>facultatif</span>",
-  "modal.send": "Envoyer les réponses",
-  "modal.skip": "Plus tard",
-  "modal.done.h": "Merci — cela nous aide beaucoup",
-  "modal.done.p": "Réponses enregistrées. Nous vous écrirons dès que nous aurons quelque chose à montrer.",
-  "modal.done.btn": "Fermer",
+  "fu.send": "Envoyer",
+  "fu.done": "Merci — c’est exactement ce qui nous dit quoi construire en premier.",
   "form.ph": "vous@exemple.fr",
   "q4.ph": "Ex. Canon MF445dw",
   "nav.aria": "Sections",
   "theme.aria": "Basculer entre le mode clair et le mode sombre",
   "m.aria": "Chiffres",
   "dock.hide": "Masquer ce bouton",
-  "modal.close": "Fermer",
   "msg.badEmail": "Saisissez une adresse e-mail valide.",
   "msg.consent": "Pour vous inscrire, cochez la case de consentement.",
   "msg.sending": "Envoi…",
@@ -1998,7 +2035,7 @@ window.SCANINBOX_I18N = {
   "anim.old2": "Scanner – Buchhaltung",
   "anim.f3": "Lieferschein_2026-0407.pdf",
   "anim.sz3": "2,4 MB",
-  "fig.cap": "<b>Abb. 1</b> – Das Gerät meldet sich mit eigenen Zugangsdaten am SMTP-Server an und sendet das PDF an die Adresse, die Sie angeben. Tragen Sie Ihre E-Mail-Adresse ins Formular ein, dann zeigt die Animation sie an.",
+  "fig.cap": "<b>Abb. 1</b> – Das Gerät meldet sich mit eigenen Zugangsdaten am SMTP-Server an und sendet das PDF an die Adresse, die Sie angeben. Tragen Sie Ihre E-Mail-Adresse ins Formular ein, dann fliegt die Nachricht in der Animation dorthin.",
   "m1v": "~5 Min.",
   "m1": "einmalige Einrichtung",
   "m2v": "&lt; 1 Min.",
@@ -2033,31 +2070,31 @@ window.SCANINBOX_I18N = {
   "who.p4.b": "Sie fügen das neue Gerät im Konto hinzu und bekommen dafür neue Zugangsdaten. Die Adresse, an der die Scans ankommen, bleibt dieselbe – es wechselt nur die Hardware darunter.",
   "who.p4.o": "Man muss nichts vom letzten Mal wissen und nichts von Hand übertragen.",
   "rail.how": "Ablauf",
-  "how.h2": "Vier Schritte, einmal pro Gerät",
-  "how.lede": "Eine Einrichtung. Danach funktioniert das Scannen einfach – auch nach einem Neustart des Geräts und auch dann, wenn im Büro die Leute wechseln.",
-  "how.s1.h": "Konto anlegen",
-  "how.s1.p": "Mit der E-Mail-Adresse, an der Sie die Scans bekommen wollen. Ohne Handelsregisternummer und ohne Gespräch mit dem Vertrieb.",
-  "how.s1.t": "~30 Sekunden",
-  "how.s2.h": "Gerät hinzufügen",
-  "how.s2.p": "Benennen Sie es so, wie die Leute im Haus es nennen – Empfang, 3. Stock, Buchhaltung. Das Portal erzeugt für dieses Gerät sofort eigene SMTP-Zugangsdaten.",
-  "how.s2.t": "~1 Minute",
-  "how.s3.h": "Werte im Gerät eintragen",
-  "how.s3.p": "Öffnen Sie am Gerät „Scan to E-mail“ und übertragen Sie Server, Port, Benutzer und Passwort. Im Portal steht, was in welches Feld gehört. Einmal – danach lassen Sie es unberührt, solange Sie das Gerät nicht wechseln oder neue Zugangsdaten anfordern.",
-  "how.s3.t": "~3 Minuten",
-  "how.s4.h": "Scannen",
-  "how.s4.p": "Drücken Sie „Scan to E-mail“, wählen Sie die Adresse – und während das Blatt durch den Einzug läuft, ist das PDF schon im Postfach.",
-  "how.s4.t": "unter 1 Minute",
-  "cfg.h": "Zugangsdaten des Geräts",
+  "how.h2": "Vom Druckerkauf zu einer digitalen Gewohnheit, die funktioniert",
+  "how.lede": "Die meisten stoßen auf dieselbe Weise auf dieses Problem: Sie kaufen oder erben einen Drucker, sehen, dass er Scan-to-Email bereits verspricht, und bleiben dann an der SMTP-Maske hängen. ScanInbox springt direkt von „Ich habe einen Drucker“ zu „Er schickt mir den Scan per E-Mail“ – eine geführte Einrichtung, und danach läuft es einfach, solange das Gerät Ihnen gehört.",
+  "how.s1.h": "1. Fotografieren Sie Ihren Drucker",
+  "how.s1.p": "Machen Sie ein Foto von Ihrem Drucker. Unsere KI ermittelt das genaue Modell – keine feste Liste, wir versuchen es mit jedem Drucker.",
+  "how.s2.h": "2. Konfiguration sofort erhalten",
+  "how.s2.p": "Wir erkennen das Modell Ihres Druckers, erzeugen die passenden SMTP-Einstellungen und legen dafür eine eigene E-Mail-Adresse an – dazu eine Anleitung, wo genau die Konfiguration am Drucker einzutragen ist. Lässt sich das Modell nicht sicher erkennen? Dann zeigen wir die allgemeine Einstellungsmaske.",
+  "how.s3.h": "3. Einmal eintragen",
+  "how.s3.p": "Öffnen Sie die Einstellungen Ihres Druckers, gehen Sie zu genau der Maske, die wir Ihnen nennen, und tragen Sie ein, was wir für Sie geschrieben haben. Einmal, für immer – unter fünf Minuten auch beim ersten Mal.",
+  "how.s4.h": "4. Einfach scannen",
+  "how.s4.p": "Drücken Sie Scan to Email, wählen Sie Ihre Adresse, und wenn der Scan fertig ist, liegt er schon in Ihrem Postfach – automatisch archiviert, jederzeit durchsuchbar, in unter einer Minute pro Dokument.",
+  "flow.1": "Ihr Foto",
+  "flow.2": "Die KI liest das Modell",
+  "flow.3": "Konfiguration unten",
+  "cfg.h": "Erzeugte Konfiguration",
   "cfg.eg": "Beispiel",
-  "cfg.server": "SMTP-Server",
-  "cfg.port": "Port",
-  "cfg.auth": "Authentifizierung",
-  "cfg.on": "Ein",
-  "cfg.user": "Benutzer",
-  "cfg.from": "Absenderadresse",
-  "cfg.att": "Anhang",
-  "cfg.size": "Größenbegrenzung",
-  "cfg.ft": "Das sind Beispielwerte. Die echten erzeugt das Portal für jedes Gerät einzeln, damit auf dem Gerät im Flur nie ein Passwort gespeichert ist, das noch etwas anderes öffnet. Die Absenderadresse liegt auf unserer Domain – der Versand unter eigener Domain ist für die erste Version nicht vorgesehen.",
+  "cfg.r1": "Drucker erkannt",
+  "cfg.v1": "Canon imageRUNNER 2630i <em>(Beispiel)</em>",
+  "cfg.r2": "Eigene Adresse",
+  "cfg.r3": "Verschlüsselung",
+  "cfg.v3": "SMTP über TLS, automatisch erzeugt",
+  "cfg.r4": "Anhang",
+  "cfg.v4": "PDF &middot; pro Scan",
+  "cfg.r5": "Was Sie eintragen",
+  "cfg.v5": "Server, Port und diese Adresse – sonst nichts",
+  "cfg.ft": "Das sind Beispielwerte. Die echten erzeugt ScanInbox für jeden Drucker einzeln, damit das Gerät im Flur nie Zugangsdaten trägt, die noch etwas anderes öffnen.",
   "rail.price": "Preis",
   "price.h2": "Ein Preis pro Gerät und Jahr",
   "price.unit": "pro Gerät und Jahr, inkl. MwSt.",
@@ -2073,7 +2110,7 @@ window.SCANINBOX_I18N = {
   "price.note": "Der Preis ist geplant, und der Dienst ist noch nicht erhältlich. Vor dem Start sprechen wir alle Angemeldeten an – auch dann, wenn sich zeigt, dass der Preis anders ausfallen muss.",
   "rail.signup": "Anmeldung",
   "signup.h2": "E-Mail hinterlassen – der Rest dauert 20 Sekunden",
-  "signup.p": "Wir schreiben Ihnen, sobald ScanInbox fertig ist. Die ersten 10 Anmeldungen bekommen ein Jahr kostenlos für ein Gerät. Nach der Anmeldung stellen wir drei Fragen zu Ihren Geräten – die Antworten sind freiwillig, aber sie bestimmen, was wir zuerst bauen.",
+  "signup.p": "Wir schreiben Ihnen, sobald ScanInbox fertig ist. Die ersten zehn Anmeldungen bekommen ein Jahr kostenlos für ein Gerät. Nach der Anmeldung stellen wir ein paar Fragen zu Ihren Geräten – die Antworten sind freiwillig, aber sie entscheiden, welche Geräte wir zuerst unterstützen.",
   "assure.1": "Nur zu ScanInbox – kein Newsletter, keine Werbung.",
   "assure.2": "Ihre Adresse bekommt niemand sonst.",
   "rail.faq": "FAQ",
@@ -2089,7 +2126,7 @@ window.SCANINBOX_I18N = {
   "faq.q4": "Brauche ich eine feste IP-Adresse oder einen offenen Port 25?",
   "faq.a4": "Nein. Das Gerät verbindet sich selbst über Port 465 oder 587 mit unserem Server, mit Benutzername und Passwort. Das funktioniert hinter einem normalen Heim- oder Büroanschluss, auch mit dynamischer IP-Adresse.",
   "faq.q5": "Brauche ich eine IT-Fachkraft?",
-  "faq.a5": "Nein. Sie müssen die Einstellungen des Geräts öffnen und ein paar Felder von einem Bildschirm auf den anderen übertragen können: Server, Port, Verschlüsselung, Benutzer, Passwort und Absenderadresse. Im Portal steht, wie jedes Feld im jeweiligen Menü heißt. Wenn es doch nicht klappt – antworten Sie auf unsere E-Mail, dann gehen wir es zusammen durch.",
+  "faq.a5": "Nein. Sie müssen die Einstellungen des Geräts öffnen und Server, Port und die Adresse übertragen können, die wir vorbereitet haben – sonst nichts. Die Anleitung zeigt, wie jedes Feld in Ihrem Menü heißt. Wenn es doch nicht klappt, antworten Sie auf unsere E-Mail, dann gehen wir es zusammen durch.",
   "faq.q6": "Was passiert mit meinen Dokumenten?",
   "faq.a6": "Die Dokumente laufen über eine verschlüsselte Verbindung vom Gerät zu unserem Server und weiter an Ihre Adresse; auf unserer Seite geschieht das in der Infrastruktur von inbox.eu in der Europäischen Union, nach DSGVO. Kein Mensch liest sie, und den Inhalt verwenden wir für nichts anderes. Das Einzige, was unterwegs mit der E-Mail geschieht, ist eine automatische Prüfung auf Schadsoftware und Spam.",
   "faq.q7": "Kann ich Scans an Gmail oder an meine Arbeitsadresse bekommen?",
@@ -2105,34 +2142,34 @@ window.SCANINBOX_I18N = {
   "faq.q13": "Kann damit auch ein Gast scannen?",
   "faq.a13": "Ja. Die Adresse gibt am Display des Geräts derjenige ein, der scannt. So kann ein Kunde, ein Prüfer oder ein Kollege aus einer anderen Abteilung ein Dokument an sich selbst senden, ohne vorher angelegt zu werden. Eingerichtet wird einmal – das Gerät selbst, nicht jede einzelne Person.",
   "faq.q12": "Was machen Sie mit meiner E-Mail-Adresse?",
-  "faq.a12": "Wir speichern Ihre Adresse, die Sprache der Seite und die Antworten, die Sie nach der Anmeldung freiwillig geben, für einen Zweck: um über ScanInbox zu informieren und zu verstehen, was wir zuerst bauen sollen. IP-Adresse und Browserdaten speichern wir gar nicht. Keine anderen E-Mails, keine Werbung, und an niemanden geben wir sie weiter. Wir speichern sie bis zum Start und nicht länger als 24 Monate. Antworten Sie auf eine beliebige unserer E-Mails mit „nein“, und wir löschen Adresse und Antworten innerhalb weniger Werktage.",
+  "faq.a12": "Wir speichern Ihre Adresse, die Sprache der Seite und die Antworten, die Sie nach der Anmeldung freiwillig geben, für einen Zweck: um über ScanInbox zu informieren und zu verstehen, was wir zuerst bauen sollen. IP-Adresse und Browserdaten speichern wir gar nicht. Wir nutzen sie für keine anderen E-Mails und für keine Werbung, und wir geben sie an niemanden weiter. Wir speichern sie bis zum Start und nicht länger als 24 Monate. Antworten Sie auf eine beliebige unserer E-Mails mit „nein“, und wir löschen Adresse und Antworten innerhalb weniger Werktage.",
   "foot.id": "<b>ScanInbox</b> – ein Dienst von inbox.eu in Entwicklung.",
   "foot.note": "Diese Seite gibt es, um herauszufinden, ob das Produkt gebraucht wird. Der Dienst ist noch nicht verfügbar, und hier lässt sich nichts kaufen. Herstellernamen sind Marken ihrer jeweiligen Inhaber; ScanInbox steht mit ihnen in keiner Verbindung.",
-  "modal.h": "Danke – Sie stehen auf der Liste",
-  "modal.p": "Wir schreiben an <code id=\"modal-mail\"></code>, sobald es etwas zu zeigen gibt.",
-  "modal.ask": "<b>Möchten Sie noch drei Fragen beantworten?</b> Sie helfen uns zu verstehen, was wir zuerst bauen. Keine davon ist Pflicht – schließen Sie das Fenster, die Anmeldung bleibt gültig.",
+  "fu.intro": "Beantworten Sie noch ein paar Fragen? Ganz freiwillig — tippen Sie eine Antwort an oder überspringen Sie.",
+  "fu.n1": "Frage 1 von 4",
   "q1.h": "Wer würde es nutzen?",
   "q1.o1": "Ich selbst, zu Hause",
   "q1.o2": "Kleines Büro, bis 10 Personen",
   "q1.o3": "Firma, 10–100 Personen",
   "q1.o4": "Große Organisation oder Behörde",
+  "fu.skip": "Rest überspringen",
+  "fu.n2": "Frage 2 von 4",
   "q2.h": "Für wie viele Geräte?",
-  "q3.h": "Welche Marken haben Sie?<span>Mehrfachauswahl möglich</span>",
+  "fu.n3": "Frage 3 von 4",
+  "q3.h": "Welche Gerätemarken haben Sie? <span>Mehrfachauswahl möglich</span>",
   "q3.other": "Andere",
   "q3.unknown": "Weiß nicht",
+  "fu.next": "Weiter",
+  "fu.n4": "Frage 4 von 4",
   "q4.h": "Modell, falls bekannt <span>optional</span>",
-  "modal.send": "Antworten senden",
-  "modal.skip": "Vielleicht später",
-  "modal.done.h": "Danke – das hilft uns sehr",
-  "modal.done.p": "Antworten gespeichert. Wir schreiben, sobald es etwas zu zeigen gibt.",
-  "modal.done.btn": "Schließen",
+  "fu.send": "Senden",
+  "fu.done": "Danke — genau das sagt uns, was wir zuerst bauen sollen.",
   "form.ph": "name@beispiel.de",
   "q4.ph": "z. B. Canon MF445dw",
   "nav.aria": "Abschnitte",
   "theme.aria": "Zwischen hellem und dunklem Modus wechseln",
   "m.aria": "Zahlen",
   "dock.hide": "Diese Schaltfläche ausblenden",
-  "modal.close": "Schließen",
   "msg.badEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
   "msg.consent": "Zum Vormerken müssen Sie der Kontaktaufnahme zustimmen.",
   "msg.sending": "Wird gesendet…",
@@ -2255,7 +2292,7 @@ window.SCANINBOX_I18N = {
 
     /* Everything below survives an innerHTML swap only if it is re-applied. */
     syncWire(wireTyped);
-    if (signedUpAs) { showAddress(signedUpAs); markDone(signedUpAs); }
+    if (signedUpAs) markDone(signedUpAs);
 
     /* Only a language the visitor picked themselves is remembered. Storing the
        detected one would freeze the first guess forever and stop the page from
@@ -2338,17 +2375,58 @@ window.SCANINBOX_I18N = {
 
   function syncWire(value) {
     var v = (value || "").trim();
+    var was = wireTyped;
     if (EMAIL.test(v)) { wireTyped = v; wireTo.textContent = v; }
     else { wireTyped = ""; wireTo.textContent = phrase("anim.to", lvWireDefault); }
+
+    /* The moment their address becomes the destination, play the story again
+       from the top — otherwise it swaps in mid-flight and they never see the
+       mail leave for their own inbox. */
+    if (wireTyped && wireTyped !== was && typeof restartFigure === "function" && figureOnScreen()) {
+      restartFigure();
+    }
   }
 
-  /* Nothing animates while the figure is off screen. */
-  if ("IntersectionObserver" in window) {
-    var frame = $("anim");
-    new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) { frame.classList.toggle("is-idle", !e.isIntersecting); });
-    }, { threshold: 0 }).observe(frame);
+  /* ------------------------------------------------- the figure's clock ---
+     Nothing animates while the figure is off screen, and the story starts from
+     the beginning every time it comes back. Without the restart a visitor who
+     scrolls down and up arrives in the middle of the loop — most often at
+     "sent", which is the one frame that explains nothing on its own. */
+  var frame = $("anim");
+
+  function figureOnScreen() {
+    var r = frame.getBoundingClientRect();
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    return r.bottom > 0 && r.top < vh;
   }
+
+  /* Dropping every animation and forcing a reflow restarts them all from zero
+     in one go, and it works everywhere — getAnimations() does not. */
+  function restartFigure() {
+    frame.classList.add("is-rewound");
+    void frame.offsetWidth;
+    frame.classList.remove("is-rewound");
+  }
+
+  var figureRunning = true;
+
+  function syncFigure() {
+    /* Read where the figure actually is rather than trusting the observer
+       entry: queued records arrive out of step with the current scroll
+       position, and the last one applied wins even when it is stale. */
+    var on = figureOnScreen();
+    if (on === figureRunning) return;
+    figureRunning = on;
+    frame.classList.toggle("is-idle", !on);
+    if (on) restartFigure();
+  }
+
+  window.addEventListener("scroll", syncFigure, { passive: true });
+  window.addEventListener("resize", syncFigure);
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(syncFigure, { threshold: 0 }).observe(frame);
+  }
+  syncFigure();
 
   langSel.addEventListener("change", function () { setLang(langSel.value, true); });
   setLang(initialLang());
@@ -2428,11 +2506,6 @@ window.SCANINBOX_I18N = {
      together, so nobody signs up twice without meaning to. */
   var forms = [];
 
-  function showAddress(email) {
-    var slot = $("modal-mail");
-    if (slot) slot.textContent = email;
-  }
-
   function markDone(email) {
     signedUpAs = email;
     forms.forEach(function (f) {
@@ -2484,10 +2557,12 @@ window.SCANINBOX_I18N = {
       post({ email: email, consent: true, lang: lang }).then(function () {
         inFlight = false;
         f.btn.disabled = false;
-        showAddress(email);
         syncWire(email);
         markDone(email);
-        openModal();
+        /* The questions appear in this form's own card, under the line that
+           just confirmed the sign-up. */
+        openFollowup(f.form);
+        fu.scrollIntoView({ block: "nearest" });
       }).catch(function (err) {
         inFlight = false;
         f.btn.disabled = false;
@@ -2542,112 +2617,97 @@ window.SCANINBOX_I18N = {
             function (err) { clearTimeout(timer); throw err; });
   }
 
-  /* ------------------------------------------------------------ survey ---
-     Opens only after the lead is already stored, so everything here is a
-     bonus. Answers are tapped, never typed — except the model, which is the
-     one thing we cannot offer as a list. Skipping costs nothing. */
-  var scrim = $("scrim");
-  var modal = $("modal");
-  var survey = $("survey");
-  var surveyMsg = $("survey-msg");
-  var surveyGo = $("survey-go");
-  var surveyDone = $("survey-done");
-  var lastFocus = null;
+  /* -------------------------------------------- the follow-up questions ---
+     Shown in the card the visitor just used, not over it. One question at a
+     time, one tap per answer, and each answer is saved as soon as it is given
+     — somebody who stops after question two still told us two things. */
+  var fu = $("followup");
+  var fuSteps = Array.prototype.slice.call(fu.querySelectorAll(".fu__step"));
+  var fuDone = fu.querySelector(".fu__done");
+  var fuIntro = fu.querySelector(".fu__intro");
+  var fuModel = $("fu-model");
+  var fuAt = 1;
+  var answers = { segment: "", devices: "", brands: [], model: "" };
 
-  function openModal() {
-    if (!scrim.hidden) return;
-    /* Reset: the same dialog is reused if somebody signs a second address up,
-       and it must ask the questions again rather than show the old thank-you. */
-    survey.hidden = false;
-    surveyDone.hidden = true;
-    surveyGo.disabled = false;
-    survey.reset();
-    hush(surveyMsg);
-
-    lastFocus = document.activeElement;
-    scrim.hidden = false;
-    /* Reading a layout property flushes the style change, so the transition
-       has a start value to move from. requestAnimationFrame would do the same
-       but does not run in a background tab, and this must not depend on that. */
-    void scrim.offsetHeight;
-    scrim.classList.add("is-on");
-    /* Both elements: body alone does not hold iOS Safari, and this dialog is
-       a bottom sheet on exactly that device. */
-    root.classList.add("is-locked");
-    modal.setAttribute("tabindex", "-1");
-    modal.focus();
-    document.addEventListener("keydown", onKey);
+  /* The form the visitor used keeps the questions, so they appear exactly
+     where they were looking. One block, moved — not two that can drift. */
+  function openFollowup(form) {
+    /* Directly after the form, not at the end of whatever contains it — the
+       questions belong under the field that was just filled in, above the
+       small print that follows it. */
+    form.parentNode.insertBefore(fu, form.nextSibling);
+    fuAt = 1;
+    showStep(1);
+    fu.hidden = false;
   }
 
-  function closeModal() {
-    scrim.classList.remove("is-on");
-    root.classList.remove("is-locked");
-    document.removeEventListener("keydown", onKey);
-    var hide = function () { scrim.hidden = true; };
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) hide();
-    else setTimeout(hide, 220);
-    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  function showStep(n) {
+    fuSteps.forEach(function (s) { s.hidden = Number(s.getAttribute("data-step")) !== n; });
+    fuIntro.hidden = n !== 1;
   }
 
-  function onKey(ev) {
-    if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); closeModal(); return; }
-    if (ev.key !== "Tab") return;
-    /* Keep the keyboard inside the dialog while it is open. */
-    var focusable = modal.querySelectorAll("button, input, select, textarea, a[href], [tabindex]:not([tabindex='-1'])");
-    var open = Array.prototype.filter.call(focusable, function (el) { return el.offsetParent !== null; });
-    if (!open.length) return;
-    var first = open[0];
-    var last = open[open.length - 1];
-    if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
-    else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+  function finish() {
+    fuSteps.forEach(function (s) { s.hidden = true; });
+    fuIntro.hidden = true;
+    fuDone.hidden = false;
   }
 
-  $("modal-x").addEventListener("click", closeModal);
-  $("survey-skip").addEventListener("click", closeModal);
-  $("survey-close").addEventListener("click", closeModal);
-  scrim.addEventListener("mousedown", function (ev) { if (ev.target === scrim) closeModal(); });
+  function advance() {
+    fuAt += 1;
+    if (fuAt > fuSteps.length) finish();
+    else showStep(fuAt);
+  }
 
-  survey.addEventListener("submit", function (ev) {
-    ev.preventDefault();
-    var data = new FormData(survey);
-    var brands = data.getAll("brands");
-    var model = (data.get("model") || "").trim();
+  /* Nothing is batched to the end: send what is known each time it changes, so
+     an abandoned questionnaire is still worth something. Failures are silent
+     on purpose — the lead is already saved, and a red box under a thank-you
+     would read as if the sign-up itself had gone wrong. */
+  function saveAnswers() {
+    if (!signedUpAs) return;
+    var payload = { email: signedUpAs, consent: true, lang: lang };
+    if (answers.segment) payload.segment = answers.segment;
+    if (answers.devices) payload.devices = answers.devices;
+    if (answers.brands.length) payload.brands = answers.brands;
+    if (answers.model) payload.model = answers.model;
+    if (!payload.segment && !payload.devices && !payload.brands && !payload.model) return;
+    post(payload).catch(function () {});
+  }
 
-    /* Nothing filled in is a legitimate answer, but the primary button still
-       has to acknowledge — silently vanishing is indistinguishable from a
-       failure. The X and "maybe later" remain the quiet way out. */
-    if (!data.get("segment") && !data.get("devices") && !brands.length && !model) {
-      survey.hidden = true;
-      surveyDone.hidden = false;
-      $("survey-close").focus();
+  fu.addEventListener("click", function (ev) {
+    var chip = ev.target.closest ? ev.target.closest(".chip") : null;
+
+    if (chip) {
+      var q = chip.getAttribute("data-q");
+      var v = chip.getAttribute("data-v");
+
+      /* Brands is the only question where more than one answer is true, so it
+         toggles and waits for the visitor to say they are done. */
+      if (q === "brands") {
+        var at = answers.brands.indexOf(v);
+        if (at > -1) { answers.brands.splice(at, 1); chip.classList.remove("is-picked"); }
+        else { answers.brands.push(v); chip.classList.add("is-picked"); }
+        return;
+      }
+
+      answers[q] = v;
+      var group = chip.parentNode.querySelectorAll(".chip");
+      Array.prototype.forEach.call(group, function (c) { c.classList.toggle("is-picked", c === chip); });
+      saveAnswers();
+      advance();
       return;
     }
 
-    surveyGo.disabled = true;
-    say(surveyMsg, "sending");
+    if (ev.target.hasAttribute("data-next")) {
+      if (fuAt === fuSteps.length) answers.model = (fuModel.value || "").trim();
+      saveAnswers();
+      advance();
+      return;
+    }
 
-    /* Only send what was answered. The server treats a brands array — even an
-       empty one — as "replace the whole set", so sending [] here would wipe
-       the brands an earlier submission stored for this address. */
-    var payload = { email: signedUpAs, consent: true, lang: lang };
-    if (data.get("segment")) payload.segment = data.get("segment");
-    if (data.get("devices")) payload.devices = data.get("devices");
-    if (brands.length) payload.brands = brands;
-    if (model) payload.model = model;
-
-    post(payload).then(function () {
-      /* The visitor may have closed the dialog while this was in flight;
-         focusing into a hidden dialog drops focus to <body>. */
-      if (scrim.hidden) return;
-      hush(surveyMsg);
-      survey.hidden = true;
-      surveyDone.hidden = false;
-      $("survey-close").focus();
-    }).catch(function (err) {
-      surveyGo.disabled = false;
-      if (scrim.hidden) return;
-      say(surveyMsg, codeOf(err), true);
-    });
+    if (ev.target.hasAttribute("data-skip")) {
+      saveAnswers();
+      finish();
+    }
   });
 })();
 </script>
