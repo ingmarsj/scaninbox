@@ -5,23 +5,33 @@ skenētos dokumentus nogādā tieši e-pastā, izmantojot inbox.eu SMTP.
 
 Lapas vienīgais mērķis ir noskaidrot, **vai produkts ir vajadzīgs**: tā
 paskaidro ideju un savāc priekšreģistrācijas pieteikumus. Forma prasa **tikai
-e-pastu**; segmentu, ierīču skaitu un zīmolus jautā uznirstošajā logā pēc tam,
-kad pieteikums jau ir saglabāts.
+e-pastu**; segmentu, ierīču skaitu, zīmolus un modeli jautā turpat kartītē pēc
+tam, kad pieteikums jau ir saglabāts — pa vienam jautājumam, ar spiežamām
+pogām, un katra atbilde aiziet uz serveri uzreiz, tāpēc pusceļā pamesta
+aptauja tik un tā kaut ko pasaka.
 
 ### Otrā iterācija
 
 Kas mainījies pēc 8. septembra pārskatīšanas ar komandu:
 
-- **Animācija** hero sadaļā tagad izstāsta visu ceļu: lampa pārskrien lapu,
-  vēstule aizlido pa vadu uz norādīto adresi, un skenējums nolaižas iesūtnes
-  saraksta augšgalā. Adrese vadā seko tam, ko cilvēks raksta formā.
+- **Animācija** hero sadaļā izstāsta visu ceļu uz viena pulksteņa
+  (`--cycle`): nospiežas SCAN taustiņš, lampa pārskrien lapu un **dokuments
+  parādās zem tās**, vēstule aizlido pa vadu uz adresi, un skenējums nolaižas
+  iesūtnes saraksta augšgalā. Adrese vadā seko tam, ko cilvēks raksta formā,
+  un, tiklīdz tā ir derīga, stāsts sākas no jauna — lai cilvēks redz vēstuli
+  aizlidojam uz **savu** adresi. Ārpus ekrāna animācija stāv; atgriežoties tā
+  sākas no nulles, nevis no vidus.
 - **Izmestas** sadaļas «Salīdzinājums» un «Kas iekļauts» — pirmā bija gara un
   neko nepārdeva, otrā tagad dzīvo cenas kartītē un BUJ.
 - **Pievienota** sadaļa «Kurš no šiem esi tu» — četri lietojuma stāsti, starp
   tiem Microsoft 365 gadījums, kas ir asākais pieprasījuma iemesls.
 - **Laika atskaite** — ~5 min uzstādīšana, < 1 min līdz pastkastei, uz katra
   soļa savs laiks.
-- **Uzstādīšana** pārtaisīta par četrām kartītēm.
+- **Uzstādīšana** ir pārņemta 1:1 no kolēģa lapas: ievads par to, kā cilvēki
+  līdz šai problēmai nonāk, tad četri soļi vertikālā sarakstā (ikona kolonnā,
+  numurs virsrakstā, laiks ieaudzēts tekstā, nevis atsevišķā nozīmītē), un
+  bultiņu josla, kas nodod lasītāju piekļuves datu tabulai. Tās pašas klases
+  un tās pašas CSS vērtības.
 - **Cena** ir skaitlis: 10 € gadā par ierīci, pirmajiem 10 — gads bez maksas.
 - **BUJ** ir akordeons ar 14 jautājumiem, no kuriem daļa ir tehniska un tur
   ir SEO dēļ. Divi aizgūti no kolēģu lapām: «Kas ir ScanInbox?» ievadam un
@@ -134,8 +144,9 @@ curl -H "Authorization: Bearer kada-gara-nejauna-virkne" http://localhost:8123/a
 **atjauno atbildes**, nevis rada dublikātu; e-pasts tiek salīdzināts mazajos
 burtos.
 
-Tā kā lapa pieraksta cilvēku ar e-pastu vien un pārējo jautā pēc tam, uz
-serveri viens pieteikums aiziet kā **divi pieprasījumi**. Tāpēc atjaunošana
+Tā kā lapa pieraksta cilvēku ar e-pastu vien un pārējo jautā pēc tam, pa vienam
+jautājumam, uz serveri viens pieteikums aiziet kā **vairāki pieprasījumi** —
+pa vienam uz katru atbildi. Tāpēc atjaunošana
 izmanto `COALESCE`: iesniegums, kas nes mazāk atbilžu, jau saglabātās
 **nenodzēš**. Vienīgais izņēmums ir zīmolu saraksts — ja lauks vispār ir
 klāt, tas aizstāj kopu pilnībā, lai atzīmēto varētu arī noņemt.
@@ -168,8 +179,9 @@ serveri vēlreiz.
 
 IP adreses un user-agent. Lapa lietotājam apsola glabāt tikai e-pastu un
 formas atbildes, tāpēc neko citu arī neglabājam. IP tiek izmantots tikai
-servera atmiņā ātruma ierobežošanai (6 iesniegumi 10 minūtēs — pieteikums un
-aptauja ir divi atsevišķi) un nekur nenonāk.
+servera atmiņā ātruma ierobežošanai (30 iesniegumi 10 minūtēs — birojs sēž aiz
+vienas publiskās adreses, un viens pieteikums ir vairāki pieprasījumi) un nekur
+nenonāk.
 
 ## Kur nonāk pieteikumi
 
