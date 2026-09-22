@@ -353,10 +353,35 @@ describe('metodes un statiskie faili', () => {
     assert.match(html, /<title>ScanInbox<\/title>/);
   });
 
-  test('lapa sūta pieteikumus uz to pašu API un nekur citur', async () => {
+  /* Šis tests sargā apzinātu lēmumu, nevis kodu: pieteikumam ir viens
+     galamērķis un rezerves glabātavas nav. Galapunkts tagad ir uzstādāms, jo
+     uz GitHub Pages servera nav un API ir citur — bet uzstādāms tikai vienā
+     vietā, un lapa joprojām sūta tikai turp. */
+  test('lapa sūta pieteikumus uz vienu galapunktu un nekur citur', async () => {
     const html = await (await s.get('/')).text();
-    assert.match(html, /LEADS_ENDPOINT\s*=\s*"\/api\/leads"/);
+
+    /* Noklusējums ir tā pati izcelsme; vienīgais cits avots ir
+       <meta name="scaninbox:api">, ko uzstāda pie publicēšanas. */
+    assert.match(html, /LEADS_ENDPOINT = \(apiMeta[\s\S]{0,120}"\/api\/leads"/,
+      'galapunkts nāk no meta taga vai tās pašas izcelsmes');
+    assert.match(html, /<meta name="scaninbox:api" content="[^"]*">/);
+
+    /* Visā lapā — ne tikai vienā skriptā — ir tieši viens tīkla izsaukums, un
+       tas iet uz LEADS_ENDPOINT. Lapā ir vairāki skripti (galvenē valodas
+       pāradresācija), tāpēc skaitām pāri visam dokumentam. */
+    const fetches = html.match(/fetch\s*\(/g) || [];
+    assert.equal(fetches.length, 1, 'lapā ir tieši viens fetch');
+    assert.match(html, /fetch\(LEADS_ENDPOINT,/);
+    assert.equal(/XMLHttpRequest|sendBeacon|navigator\.sendBeacon/.test(html), false,
+      'nav otra ceļa, pa kuru dati varētu aiziet');
+
+    /* Nekādas otras glabātavas: ne Artifact, ne svešs domēns, ne pieteikumu
+       nolikšana pārlūkā. */
     assert.equal(/claude\.use\(/.test(html), false, 'Artifact glabātava ir izņemta');
+    assert.equal(/localStorage\.setItem\(\s*["'][^"']*lead/i.test(html), false,
+      'pieteikumi netiek glabāti pārlūkā');
+    assert.equal(/document\.cookie\s*=\s*["'][^"']*(lead|email)/i.test(html), false,
+      'pieteikumi netiek glabāti sīkdatnē');
   });
 
   for (const route of ['/data/test.db', '/db/schema.sql', '/test/api.test.js', '/.gitignore']) {

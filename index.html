@@ -7,6 +7,46 @@
 <!-- Nelaists produkts: lapu nedrīkst indeksēt, kamēr tā ir pārskatīšanai.
      Noņem šo rindu pirms publiskās palaišanas. -->
 <meta name="robots" content="noindex, nofollow">
+<!-- Kur lapa sūta pieteikumus. Tukšs vai noņemts = tā pati izcelsme, kas lapa
+     (tā ir pareizi, kamēr lapu pasniedz server.js). Uz GitHub Pages servera
+     nav, tāpēc šeit jāieraksta reālā API adrese, piemēram
+     content="https://api.scaninbox.eu/api/leads" — un tajā serverī jāuzstāda
+     SCANINBOX_ALLOW_ORIGIN=https://ingmarsj.github.io -->
+<meta name="scaninbox:api" content="">
+<!-- Publicējot CI ieliek <meta name="scaninbox:langpaths" content="1">, un
+     tikai tad saknes lapa pāradresē uz /lv/, /de/ un tā tālāk. Lokāli šī taga
+     nav, tāpēc nekādas pāradresācijas nav un ?lang= strādā kā līdz šim. -->
+<script>
+(function () {
+  if (!document.querySelector('meta[name="scaninbox:langpaths"]')) return;
+  var LANGS = ["lv", "en", "it", "fr", "de"];
+  var path = location.pathname.replace(/index\.html$/, "");
+  /* Lapa, kas jau nosaukta savā valodā, paliek tur, kur prasīts. */
+  if (/\/(lv|en|it|fr|de)\/$/.test(path)) return;
+  var q = new URLSearchParams(location.search).get("lang");
+  if (q && LANGS.indexOf(q.toLowerCase()) > -1) return;
+
+  var m = document.cookie.match(/(?:^|; )scaninbox_lang=([^;]*)/);
+  var want = m ? decodeURIComponent(m[1]) : "";
+
+  if (LANGS.indexOf(want) === -1) {
+    var TZ = { "Europe/Riga": "lv", "Europe/Rome": "it", "Europe/Vatican": "it",
+               "Europe/San_Marino": "it", "Europe/Paris": "fr", "Europe/Monaco": "fr",
+               "Europe/Berlin": "de", "Europe/Busingen": "de", "Europe/Vienna": "de",
+               "Europe/Vaduz": "de" };
+    try { want = TZ[Intl.DateTimeFormat().resolvedOptions().timeZone] || ""; } catch (e) {}
+  }
+  if (LANGS.indexOf(want) === -1) {
+    var prefs = navigator.languages || [navigator.language || ""];
+    for (var i = 0; i < prefs.length && LANGS.indexOf(want) === -1; i++) {
+      var c = String(prefs[i]).slice(0, 2).toLowerCase();
+      if (LANGS.indexOf(c) > -1) want = c;
+    }
+  }
+  if (LANGS.indexOf(want) === -1) want = "en";
+  location.replace(path + want + "/" + location.search + location.hash);
+})();
+</script>
 <!-- ARTIFACT:BEGIN -->
 <title>ScanInbox</title>
 <!-- Kā lapa izskatās, kad to ielīmē Slack, WhatsApp vai e-pastā. Saturu
@@ -1631,7 +1671,7 @@ window.SCANINBOX_I18N = {
   "msg.consent": "To sign up, tick the consent box.",
   "msg.sending": "Sending…",
   "msg.saved": "Thank you — you are on the list. We will write as soon as there is something to show.",
-  "msg.noApi": "This is a preview copy — it does not save sign-ups.",
+  "msg.savedDemo": "Thank you! This is a preview version — the address was not saved.",
   "msg.offline": "There seems to be no connection. Please try again.",
   "msg.network": "Could not reach the server. Please try again.",
   "msg.busy": "Too many requests. Please try again in a moment.",
@@ -1812,7 +1852,7 @@ window.SCANINBOX_I18N = {
   "msg.consent": "Per iscriverti devi dare il consenso al contatto.",
   "msg.sending": "Invio in corso…",
   "msg.saved": "Grazie — sei nella lista. Ti scriveremo appena avremo qualcosa da mostrare.",
-  "msg.noApi": "Questa è una copia di anteprima — non salva le iscrizioni.",
+  "msg.savedDemo": "Grazie! Questa è una versione di anteprima: l’indirizzo non è stato salvato.",
   "msg.offline": "Sembra che non ci sia connessione. Riprova.",
   "msg.network": "Non è stato possibile raggiungere il server. Riprova.",
   "msg.busy": "Troppe richieste. Riprova tra un momento.",
@@ -1993,7 +2033,7 @@ window.SCANINBOX_I18N = {
   "msg.consent": "Pour vous inscrire, cochez la case de consentement.",
   "msg.sending": "Envoi…",
   "msg.saved": "Merci — vous êtes sur la liste. Nous vous écrirons dès que nous aurons quelque chose à montrer.",
-  "msg.noApi": "Ceci est une copie de prévisualisation — elle n’enregistre pas les inscriptions.",
+  "msg.savedDemo": "Merci ! Ceci est une version de prévisualisation : l’adresse n’a pas été enregistrée.",
   "msg.offline": "Vous semblez hors connexion. Réessayez.",
   "msg.network": "Impossible de joindre le serveur. Réessayez.",
   "msg.busy": "Trop de requêtes. Réessayez dans un instant.",
@@ -2174,7 +2214,7 @@ window.SCANINBOX_I18N = {
   "msg.consent": "Zum Vormerken müssen Sie der Kontaktaufnahme zustimmen.",
   "msg.sending": "Wird gesendet…",
   "msg.saved": "Danke – Sie stehen auf der Liste. Wir schreiben, sobald es etwas zu zeigen gibt.",
-  "msg.noApi": "Dies ist eine Vorschaukopie – Anmeldungen werden hier nicht gespeichert.",
+  "msg.savedDemo": "Danke! Dies ist eine Vorschauversion – die Adresse wurde nicht gespeichert.",
   "msg.offline": "Es scheint keine Verbindung zu bestehen. Bitte versuchen Sie es erneut.",
   "msg.network": "Der Server ist nicht erreichbar. Bitte versuchen Sie es erneut.",
   "msg.busy": "Zu viele Anfragen. Bitte versuchen Sie es in Kürze erneut.",
@@ -2195,7 +2235,11 @@ window.SCANINBOX_I18N = {
      There is no second store and no fallback: a page served from anywhere
      that cannot reach this endpoint says so rather than quietly keeping the
      data somewhere else. */
-  var LEADS_ENDPOINT = "/api/leads";
+  /* Relatīvs ceļš der, kamēr lapu pasniedz pats server.js. Uz GitHub Pages
+     servera nav, tāpēc tur galapunktu norāda ar <meta name="scaninbox:api">
+     galvenē — viena rinda, un tā pati lapa sūta uz reālo API. */
+  var apiMeta = document.querySelector('meta[name="scaninbox:api"]');
+  var LEADS_ENDPOINT = (apiMeta && apiMeta.getAttribute("content")) || "/api/leads";
 
   /* Deliberately loose: the server is the authority on what an address is, and
      a page that argues with a valid but unusual address loses the lead. */
@@ -2235,8 +2279,45 @@ window.SCANINBOX_I18N = {
   var signedUpAs = "";
   var inFlight = false;
 
+  /* True where the page is served without an API behind it — the published
+     preview on static hosting. The flow runs to the end so the whole thing can
+     be seen and reviewed; the only difference is that nothing is stored, and
+     the line under the form says so rather than claiming a place on a list
+     that does not exist. */
+  var demoMode = false;
+
   var DICT = window.SCANINBOX_I18N || {};
   var LANGS = ["lv", "en", "it", "fr", "de"];
+
+  /* The language is part of the address when the published copy has one page
+     per language. Locally there is one file and no marker, so everything below
+     falls back to swapping the text in place. */
+  var langPaths = !!document.querySelector('meta[name="scaninbox:langpaths"]');
+  var pathMatch = location.pathname.replace(/index\.html$/, "").match(/\/([a-z]{2})\/$/);
+  var pathLang = (pathMatch && LANGS.indexOf(pathMatch[1]) > -1) ? pathMatch[1] : "";
+
+  /* Everything above the language segment — /scaninbox/ for /scaninbox/de/. */
+  function basePath() {
+    var p = location.pathname.replace(/index\.html$/, "");
+    return pathLang ? p.replace(/[a-z]{2}\/$/, "") : p;
+  }
+
+  /* A cookie rather than localStorage: it is readable across the per-language
+     paths and, unlike localStorage, a server could read it later. Scoped to
+     this site's own base path so it does not leak to neighbours on the same
+     host. */
+  function rememberLang(v) {
+    try {
+      document.cookie = "scaninbox_lang=" + encodeURIComponent(v) +
+        "; max-age=31536000; path=" + basePath() + "; SameSite=Lax";
+    } catch (e) {}
+  }
+
+  function rememberedLang() {
+    var m = document.cookie.match(/(?:^|; )scaninbox_lang=([^;]*)/);
+    var v = m ? decodeURIComponent(m[1]) : "";
+    return LANGS.indexOf(v) > -1 ? v : "";
+  }
   var langSel = $("lang");
   var lang = "lv";
 
@@ -2297,7 +2378,7 @@ window.SCANINBOX_I18N = {
     /* Only a language the visitor picked themselves is remembered. Storing the
        detected one would freeze the first guess forever and stop the page from
        ever reading where they are again. */
-    if (remember) { try { localStorage.setItem("scaninbox.lang", lang); } catch (e) {} }
+    if (remember) rememberLang(lang);
   }
 
   /* ------------------------------------------------- where the reader is ---
@@ -2342,18 +2423,19 @@ window.SCANINBOX_I18N = {
     return split[0];
   }
 
-  /* ?lang= wins, because that is what an ad lands on. Then what the visitor
-     chose for themselves last time. Then where they are. Then what their
-     browser asks for. English is the last resort rather than Latvian: someone
-     this page reaches outside the Baltics reads it sooner. */
+  /* The address wins: a link to /de/ is a promise about what the reader will
+     see, and a cookie must not override it. Then ?lang=, which older ad links
+     still carry. Then what the visitor chose last time, then where they are,
+     then what their browser asks for. English is the last resort rather than
+     Latvian: someone this page reaches outside the Baltics reads it sooner. */
   function initialLang() {
+    if (pathLang) return pathLang;
+
     var q = new URLSearchParams(location.search).get("lang");
     if (q && LANGS.indexOf(q.toLowerCase()) > -1) return q.toLowerCase();
 
-    try {
-      var saved = localStorage.getItem("scaninbox.lang");
-      if (saved && LANGS.indexOf(saved) > -1) return saved;
-    } catch (e) {}
+    var saved = rememberedLang();
+    if (saved) return saved;
 
     var here = langFromLocation();
     if (here) return here;
@@ -2428,7 +2510,13 @@ window.SCANINBOX_I18N = {
   }
   syncFigure();
 
-  langSel.addEventListener("change", function () { setLang(langSel.value, true); });
+  langSel.addEventListener("change", function () {
+    var next = langSel.value;
+    /* Remember before leaving, or the choice is lost in the navigation. */
+    rememberLang(next);
+    if (langPaths && next !== pathLang) { location.href = basePath() + next + "/" + location.hash; return; }
+    setLang(next, true);
+  });
   setLang(initialLang());
 
   /* -------------------------------------------------------------- dock ---
@@ -2477,7 +2565,7 @@ window.SCANINBOX_I18N = {
     consent: "Lai pieteiktos, jāatzīmē piekrišana saziņai.",
     sending: "Sūta…",
     saved: "Paldies — esi sarakstā. Rakstīsim, tiklīdz būs ko parādīt.",
-    noApi: "Šī ir priekšskatījuma kopija — pieteikumus tā nesaglabā.",
+    savedDemo: "Paldies! Šī ir priekšskatījuma versija — adrese netika saglabāta.",
     offline: "Izskatās, ka nav savienojuma. Pamēģini vēlreiz.",
     network: "Neizdevās sasniegt serveri. Pamēģini vēlreiz.",
     busy: "Pārāk daudz pieprasījumu. Pamēģini pēc mirkļa.",
@@ -2512,7 +2600,7 @@ window.SCANINBOX_I18N = {
       f.row.hidden = true;
       f.consentRow.hidden = true;
       f.input.removeAttribute("aria-invalid");
-      say(f.msg, "saved", false);
+      say(f.msg, demoMode ? "savedDemo" : "saved", false);
     });
     syncDock();
   }
@@ -2554,7 +2642,7 @@ window.SCANINBOX_I18N = {
       inFlight = true;
       say(f.msg, "sending");
 
-      post({ email: email, consent: true, lang: lang }).then(function () {
+      function succeed() {
         inFlight = false;
         f.btn.disabled = false;
         syncWire(email);
@@ -2563,7 +2651,14 @@ window.SCANINBOX_I18N = {
            just confirmed the sign-up. */
         openFollowup(f.form);
         fu.scrollIntoView({ block: "nearest" });
-      }).catch(function (err) {
+      }
+
+      post({ email: email, consent: true, lang: lang }).then(succeed).catch(function (err) {
+        /* No API at this origin is a property of the build, not a failure the
+           visitor can do anything about: carry on and say plainly that nothing
+           was stored. A dropped connection is different — that one is worth
+           retrying, so it still reports. */
+        if (err && err.code === "no_backend") { demoMode = true; succeed(); return; }
         inFlight = false;
         f.btn.disabled = false;
         say(f.msg, codeOf(err), true);
@@ -2579,7 +2674,6 @@ window.SCANINBOX_I18N = {
   function codeOf(err) {
     var c = err && err.code;
     if (c === "resource_exhausted") return "busy";
-    if (c === "no_backend") return "noApi";
     if (c === "offline") return "offline";
     if (c === "network") return "network";
     if (c === "rejected") return err.server === "consent_required" ? "consent" : "badEmail";
@@ -2663,7 +2757,7 @@ window.SCANINBOX_I18N = {
      on purpose — the lead is already saved, and a red box under a thank-you
      would read as if the sign-up itself had gone wrong. */
   function saveAnswers() {
-    if (!signedUpAs) return;
+    if (!signedUpAs || demoMode) return;
     var payload = { email: signedUpAs, consent: true, lang: lang };
     if (answers.segment) payload.segment = answers.segment;
     if (answers.devices) payload.devices = answers.devices;

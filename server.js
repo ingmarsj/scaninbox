@@ -317,7 +317,7 @@ function createApp(options = {}) {
     res.writeHead(status, {
       'Content-Type': 'application/json; charset=utf-8',
       'X-Content-Type-Options': 'nosniff',
-      ...(allowOrigin ? { 'Access-Control-Allow-Origin': allowOrigin } : {}),
+      ...(allowOrigin ? { 'Access-Control-Allow-Origin': allowOrigin, Vary: 'Origin' } : {}),
       ...headers,
     });
     res.end(payload);
@@ -365,6 +365,7 @@ function createApp(options = {}) {
       return send(res, 204, '', {
         'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Max-Age': '86400',
       });
     }
 
