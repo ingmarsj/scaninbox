@@ -26,22 +26,28 @@
   var q = new URLSearchParams(location.search).get("lang");
   if (q && LANGS.indexOf(q.toLowerCase()) > -1) return;
 
+  /* Reiz izvēlēta valoda uzvar visu pārējo — pārlūkam vairs neprasa. */
   var m = document.cookie.match(/(?:^|; )scaninbox_lang=([^;]*)/);
   var want = m ? decodeURIComponent(m[1]) : "";
 
-  if (LANGS.indexOf(want) === -1) {
-    var TZ = { "Europe/Riga": "lv", "Europe/Rome": "it", "Europe/Vatican": "it",
-               "Europe/San_Marino": "it", "Europe/Paris": "fr", "Europe/Monaco": "fr",
-               "Europe/Berlin": "de", "Europe/Busingen": "de", "Europe/Vienna": "de",
-               "Europe/Vaduz": "de" };
-    try { want = TZ[Intl.DateTimeFormat().resolvedOptions().timeZone] || ""; } catch (e) {}
-  }
+  /* Tad pārlūka valoda: cilvēks, kura dators runā vāciski, lasa vāciski
+     neatkarīgi no tā, kur viņš tobrīd atrodas. */
   if (LANGS.indexOf(want) === -1) {
     var prefs = navigator.languages || [navigator.language || ""];
     for (var i = 0; i < prefs.length && LANGS.indexOf(want) === -1; i++) {
       var c = String(prefs[i]).slice(0, 2).toLowerCase();
       if (LANGS.indexOf(c) > -1) want = c;
     }
+  }
+
+  /* Un tikai tad vieta — spāņu pārlūkam Romā itāļu valoda der labāk nekā
+     angļu. */
+  if (LANGS.indexOf(want) === -1) {
+    var TZ = { "Europe/Riga": "lv", "Europe/Rome": "it", "Europe/Vatican": "it",
+               "Europe/San_Marino": "it", "Europe/Paris": "fr", "Europe/Monaco": "fr",
+               "Europe/Berlin": "de", "Europe/Busingen": "de", "Europe/Vienna": "de",
+               "Europe/Vaduz": "de" };
+    try { want = TZ[Intl.DateTimeFormat().resolvedOptions().timeZone] || ""; } catch (e) {}
   }
   if (LANGS.indexOf(want) === -1) want = "en";
   location.replace(path + want + "/" + location.search + location.hash);
@@ -524,18 +530,36 @@ b,strong{font-weight:600}
    screen let it shrink rather than clip */
 @media (max-width:560px){ .wire__to{font-size:.5625rem;letter-spacing:0;padding-inline:.35rem} }
 @keyframes toglow{
-  0%,50%{color:var(--device-dim);border-color:var(--device-rule);box-shadow:none}
-  54%,84%{color:var(--led);border-color:color-mix(in srgb,var(--led) 55%,transparent);box-shadow:0 0 12px -2px var(--led-glow)}
-  90%,100%{color:var(--device-dim);border-color:var(--device-rule);box-shadow:none}
+  0%,50%{color:var(--device-dim);border-color:var(--device-rule);box-shadow:0 0 0 0 var(--led-glow)}
+  54%{color:var(--led);border-color:color-mix(in srgb,var(--led) 70%,transparent);box-shadow:0 0 0 5px var(--led-glow)}
+  60%,84%{color:var(--led);border-color:color-mix(in srgb,var(--led) 55%,transparent);box-shadow:0 0 12px -2px var(--led-glow)}
+  90%,100%{color:var(--device-dim);border-color:var(--device-rule);box-shadow:0 0 0 0 var(--led-glow)}
 }
 
 /* the packet: outer element carries X, inner carries the arc, so the path
    reads as a throw rather than a straight slide */
 .pkt{position:absolute;left:0;top:50%;margin-top:-11px;animation:fly var(--cycle) cubic-bezier(.4,0,.35,1) infinite}
+/* Two copies dragging behind the envelope. Motion blur is what tells the eye
+   something is moving fast rather than being dragged. */
+.pkt::before,.pkt::after{
+  content:"";position:absolute;top:0;left:0;width:22px;height:22px;border-radius:3px;
+  background:var(--led);opacity:0;
+  animation:ghost var(--cycle) linear infinite;
+}
+.pkt::before{--gx:-9px;--gs:.84;--go:.32}
+.pkt::after{--gx:-19px;--gs:.66;--go:.14}
+@keyframes ghost{
+  0%,34%{opacity:0;transform:none}
+  38%{opacity:var(--go);transform:translateX(var(--gx)) scale(var(--gs))}
+  50%{opacity:var(--go);transform:translateX(var(--gx)) scale(var(--gs))}
+  53%,100%{opacity:0;transform:none}
+}
 .pkt i{
+  position:relative;z-index:1;
   display:grid;place-items:center;width:22px;height:22px;
-  background:var(--led);color:var(--on-led);border-radius:2px;
-  box-shadow:0 0 0 4px var(--led-glow), 0 0 16px var(--led-glow);
+  background:linear-gradient(160deg,color-mix(in srgb,#fff 26%,var(--led)),var(--led));
+  color:var(--on-led);border-radius:3px;
+  box-shadow:0 0 0 4px var(--led-glow), 0 4px 14px var(--led-glow);
   animation:arc var(--cycle) ease-in-out infinite;
 }
 .pkt svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8}
@@ -546,13 +570,23 @@ b,strong{font-weight:600}
   54%,100%{left:calc(100% - 22px);opacity:0}
 }
 @keyframes arc{
-  0%,32%{transform:translateY(0) scale(.6)}
-  42%{transform:translateY(-17px) scale(1)}
-  52%,100%{transform:translateY(2px) scale(.8)}
+  0%,32%{transform:translateY(0) scale(.6) rotate(-10deg)}
+  42%{transform:translateY(-17px) scale(1) rotate(7deg)}
+  52%,100%{transform:translateY(2px) scale(.82) rotate(0deg)}
 }
 
 /* --- 3. the inbox the mail lands in --- */
-.inbox{border:1px solid var(--device-rule);background:var(--device-2);border-radius:var(--r);overflow:hidden}
+.inbox{
+  border:1px solid var(--device-rule);background:var(--device-2);
+  border-radius:var(--r);overflow:hidden;
+  animation:arrive var(--cycle) ease-out infinite;
+}
+/* the whole panel registers the arrival, the way a mail client flashes */
+@keyframes arrive{
+  0%,56%{border-color:var(--device-rule);box-shadow:none}
+  61%{border-color:color-mix(in srgb,var(--led) 60%,transparent);box-shadow:0 0 0 3px var(--led-glow)}
+  76%,100%{border-color:var(--device-rule);box-shadow:none}
+}
 .inbox__hd{
   display:flex;align-items:center;gap:.5rem;padding:.45rem .65rem;
   border-bottom:1px solid var(--device-rule);
@@ -570,18 +604,33 @@ b,strong{font-weight:600}
 
 .inbox__list{list-style:none;margin:0;padding:0}
 .mail{
+  position:relative;
   display:flex;align-items:center;gap:.55rem;
-  height:44px;padding:0 .65rem;border-bottom:1px solid var(--device-rule);
+  height:46px;padding:0 .6rem;border-bottom:1px solid var(--device-rule);
   font-family:var(--mono);font-size:.625rem;color:var(--device-dim);
   overflow:hidden;
 }
 .mail:last-child{border-bottom:0}
-.mail__dot{width:5px;height:5px;flex:none;border-radius:50%;background:var(--device-rule)}
-.mail__tx{display:flex;flex-direction:column;min-width:0;line-height:1.45}
+
+/* Every one of these came off a machine, so the sender tile is a printer
+   rather than initials — and it says the same thing in every language. */
+.mail__av{
+  flex:none;width:24px;height:24px;display:grid;place-items:center;
+  border-radius:4px;background:#1B2328;border:1px solid var(--device-rule);
+  color:var(--device-dim);
+}
+.mail__av svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.5}
+
+.mail__tx{display:flex;flex-direction:column;min-width:0;line-height:1.45;gap:1px}
 .mail__tx b{font-family:var(--sans);font-size:.75rem;font-weight:600;color:var(--device-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mail__tx span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mail__sz{margin-inline-start:auto;flex:none}
-.mail__clip{flex:none;width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6;opacity:.7}
+.mail__file{display:flex;align-items:center;gap:.25rem;min-width:0}
+.mail__file span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mail__clip{flex:none;width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.7;opacity:.65}
+
+/* time over size, right-aligned — the shape every mail list has */
+.mail__end{margin-inline-start:auto;flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px;line-height:1.2}
+.mail__t{font-style:normal;font-size:.5625rem;color:var(--device-rule)}
+.mail__sz{font-style:normal}
 
 /* the new one grows into place at the top of the list */
 .mail--new{
@@ -589,15 +638,34 @@ b,strong{font-weight:600}
   background:linear-gradient(90deg,color-mix(in srgb,var(--led) 16%,transparent),transparent 60%);
   animation:land var(--cycle) cubic-bezier(.22,.9,.3,1) infinite;
 }
-.mail--new .mail__dot{background:var(--led);box-shadow:0 0 6px var(--led)}
+.mail--new .mail__av{
+  background:color-mix(in srgb,var(--led) 20%,#1B2328);
+  border-color:color-mix(in srgb,var(--led) 45%,transparent);
+  color:var(--led);
+}
 .mail--new .mail__tx b{color:var(--device-ink)}
 .mail--new .mail__clip{color:var(--led);opacity:1}
+.mail--new .mail__t{color:var(--led)}
+.mail--new .mail__sz{color:var(--device-ink)}
 @keyframes land{
   0%,52%{height:0;opacity:0;border-bottom-color:transparent}
   53%{opacity:0}
-  60%{height:44px;opacity:1;border-bottom-color:var(--device-rule)}
-  88%{height:44px;opacity:1;border-bottom-color:var(--device-rule)}
+  60%{height:46px;opacity:1;border-bottom-color:var(--device-rule)}
+  88%{height:46px;opacity:1;border-bottom-color:var(--device-rule)}
   93%,100%{height:0;opacity:0;border-bottom-color:transparent}
+}
+
+/* one pass of light across the row as it lands — the detail that makes it
+   read as something that just happened rather than something already there */
+.mail--new::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 34%,rgba(255,255,255,.13) 50%,transparent 66%);
+  transform:translateX(-110%);
+  animation:shine var(--cycle) ease-out infinite;
+}
+@keyframes shine{
+  0%,59%{transform:translateX(-110%)}
+  74%,100%{transform:translateX(110%)}
 }
 
 /* off-screen the whole thing stops; nothing animates behind the viewport */
@@ -619,7 +687,8 @@ b,strong{font-weight:600}
   .pkt{opacity:0}
   .wire__to{color:var(--led);border-color:color-mix(in srgb,var(--led) 55%,transparent)}
   .inbox__n{transform:none}
-  .mail--new{height:44px;opacity:1;border-bottom-color:var(--device-rule)}
+  .mail--new{height:46px;opacity:1;border-bottom-color:var(--device-rule)}
+  .mail--new::after{opacity:0}
   .state{height:auto}
   .state span{position:static;display:none}
   .state span:nth-child(3){display:block;opacity:1}
@@ -1042,31 +1111,37 @@ b,strong{font-weight:600}
                 </div>
                 <ul class="inbox__list">
                   <li class="mail mail--new">
-                    <span class="mail__dot"></span>
+                    <span class="mail__av"><svg viewBox="0 0 24 24"><path d="M7 8.6h10a2 2 0 0 1 2 2v4.8H5v-4.8a2 2 0 0 1 2-2zM7.8 8.6V4.8h8.4v3.8M7.8 15.4h8.4V20H7.8z"/></svg></span>
                     <span class="mail__tx">
                       <b id="anim-from" data-i18n="anim.from">Skeneris — Vestibils</b>
-                      <span data-i18n="anim.f1">Rekins_2026-0412.pdf</span>
+                      <span class="mail__file"><svg class="mail__clip" viewBox="0 0 24 24"><path d="M20 11.5 12.3 19a4.6 4.6 0 0 1-6.5-6.5l8-8a3 3 0 1 1 4.3 4.3l-8 8a1.5 1.5 0 0 1-2.1-2.1l7.3-7.3"/></svg><span data-i18n="anim.f1">Rekins_2026-0412.pdf</span></span>
                     </span>
-                    <svg class="mail__clip" viewBox="0 0 24 24"><path d="M20 11.5 12.3 19a4.6 4.6 0 0 1-6.5-6.5l8-8a3 3 0 1 1 4.3 4.3l-8 8a1.5 1.5 0 0 1-2.1-2.1l7.3-7.3"/></svg>
-                    <span class="mail__sz" data-i18n="anim.sz1">1,8 MB</span>
+                    <span class="mail__end">
+                      <i class="mail__t" data-i18n="anim.now">tagad</i>
+                      <i class="mail__sz" data-i18n="anim.sz1">1,8 MB</i>
+                    </span>
                   </li>
                   <li class="mail">
-                    <span class="mail__dot"></span>
+                    <span class="mail__av"><svg viewBox="0 0 24 24"><path d="M7 8.6h10a2 2 0 0 1 2 2v4.8H5v-4.8a2 2 0 0 1 2-2zM7.8 8.6V4.8h8.4v3.8M7.8 15.4h8.4V20H7.8z"/></svg></span>
                     <span class="mail__tx">
                       <b data-i18n="anim.old1">Skeneris — Vestibils</b>
-                      <span data-i18n="anim.f2">Ligums_2026-0408.pdf</span>
+                      <span class="mail__file"><svg class="mail__clip" viewBox="0 0 24 24"><path d="M20 11.5 12.3 19a4.6 4.6 0 0 1-6.5-6.5l8-8a3 3 0 1 1 4.3 4.3l-8 8a1.5 1.5 0 0 1-2.1-2.1l7.3-7.3"/></svg><span data-i18n="anim.f2">Ligums_2026-0408.pdf</span></span>
                     </span>
-                    <svg class="mail__clip" viewBox="0 0 24 24"><path d="M20 11.5 12.3 19a4.6 4.6 0 0 1-6.5-6.5l8-8a3 3 0 1 1 4.3 4.3l-8 8a1.5 1.5 0 0 1-2.1-2.1l7.3-7.3"/></svg>
-                    <span class="mail__sz" data-i18n="anim.sz2">0,9 MB</span>
+                    <span class="mail__end">
+                      <i class="mail__t">09:14</i>
+                      <i class="mail__sz" data-i18n="anim.sz2">0,9 MB</i>
+                    </span>
                   </li>
                   <li class="mail">
-                    <span class="mail__dot"></span>
+                    <span class="mail__av"><svg viewBox="0 0 24 24"><path d="M7 8.6h10a2 2 0 0 1 2 2v4.8H5v-4.8a2 2 0 0 1 2-2zM7.8 8.6V4.8h8.4v3.8M7.8 15.4h8.4V20H7.8z"/></svg></span>
                     <span class="mail__tx">
                       <b data-i18n="anim.old2">Skeneris — Grāmatvedība</b>
-                      <span data-i18n="anim.f3">Pavadzime_2026-0407.pdf</span>
+                      <span class="mail__file"><svg class="mail__clip" viewBox="0 0 24 24"><path d="M20 11.5 12.3 19a4.6 4.6 0 0 1-6.5-6.5l8-8a3 3 0 1 1 4.3 4.3l-8 8a1.5 1.5 0 0 1-2.1-2.1l7.3-7.3"/></svg><span data-i18n="anim.f3">Pavadzime_2026-0407.pdf</span></span>
                     </span>
-                    <svg class="mail__clip" viewBox="0 0 24 24"><path d="M20 11.5 12.3 19a4.6 4.6 0 0 1-6.5-6.5l8-8a3 3 0 1 1 4.3 4.3l-8 8a1.5 1.5 0 0 1-2.1-2.1l7.3-7.3"/></svg>
-                    <span class="mail__sz" data-i18n="anim.sz3">2,4 MB</span>
+                    <span class="mail__end">
+                      <i class="mail__t">08:02</i>
+                      <i class="mail__sz" data-i18n="anim.sz3">2,4 MB</i>
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -1493,9 +1568,9 @@ b,strong{font-weight:600}
 </div>
 
 <!-- I18N:BEGIN -->
-<!-- Valodu vārdnīcas. Latviešu teksts ir pašā HTML, tāpēc šeit tā nav: lapa
-     bez JavaScript ir latviski, un neviens teikums nav ierakstīts divreiz.
-     Ģenerē no db/../strings avota — labojumus raksti šeit un lapā. -->
+<!-- Valodu vārdnīcas. Latviešu teksta šeit nav: tas ir pašā lapā, tāpēc
+     bez JavaScript lapa ir latviski un nekas nav ierakstīts divreiz.
+     ĢENERĒTS no i18n/*.json — raksti tur, tad node tools/i18n.js merge. -->
 <script>
 window.SCANINBOX_I18N = {
  en: {
@@ -1525,6 +1600,7 @@ window.SCANINBOX_I18N = {
   "anim.inbox": "Inbox",
   "anim.from": "Scanner — Lobby",
   "anim.f1": "Invoice_2026-0412.pdf",
+  "anim.now": "now",
   "anim.sz1": "1.8 MB",
   "anim.old1": "Scanner — Lobby",
   "anim.f2": "Contract_2026-0408.pdf",
@@ -1706,6 +1782,7 @@ window.SCANINBOX_I18N = {
   "anim.inbox": "Posta in arrivo",
   "anim.from": "Scanner — Ingresso",
   "anim.f1": "Fattura_2026-0412.pdf",
+  "anim.now": "ora",
   "anim.sz1": "1,8 MB",
   "anim.old1": "Scanner — Ingresso",
   "anim.f2": "Contratto_2026-0408.pdf",
@@ -1887,6 +1964,7 @@ window.SCANINBOX_I18N = {
   "anim.inbox": "Boîte de réception",
   "anim.from": "Scanner — Accueil",
   "anim.f1": "Facture_2026-0412.pdf",
+  "anim.now": "à l’instant",
   "anim.sz1": "1,8 MB",
   "anim.old1": "Scanner — Accueil",
   "anim.f2": "Contrat_2026-0408.pdf",
@@ -2068,6 +2146,7 @@ window.SCANINBOX_I18N = {
   "anim.inbox": "Posteingang",
   "anim.from": "Scanner – Empfang",
   "anim.f1": "Rechnung_2026-0412.pdf",
+  "anim.now": "gerade eben",
   "anim.sz1": "1,8 MB",
   "anim.old1": "Scanner – Empfang",
   "anim.f2": "Vertrag_2026-0408.pdf",
@@ -2425,9 +2504,14 @@ window.SCANINBOX_I18N = {
 
   /* The address wins: a link to /de/ is a promise about what the reader will
      see, and a cookie must not override it. Then ?lang=, which older ad links
-     still carry. Then what the visitor chose last time, then where they are,
-     then what their browser asks for. English is the last resort rather than
-     Latvian: someone this page reaches outside the Baltics reads it sooner. */
+     still carry. Then the visitor's own choice, which silences everything
+     below it.
+     Then the browser, and only then where they are. That order matters for
+     advertising: somebody in Germany whose computer speaks German should get
+     German, and a Latvian time zone should not hand Latvian to a visitor
+     whose browser never asked for it. Location stays as the tiebreaker for
+     languages we do not have — a Spanish browser in Rome reads Italian more
+     easily than English. */
   function initialLang() {
     if (pathLang) return pathLang;
 
@@ -2437,13 +2521,14 @@ window.SCANINBOX_I18N = {
     var saved = rememberedLang();
     if (saved) return saved;
 
-    var here = langFromLocation();
-    if (here) return here;
-
     var prefs = browserLangs();
     for (var i = 0; i < prefs.length; i++) {
       if (LANGS.indexOf(prefs[i]) > -1) return prefs[i];
     }
+
+    var here = langFromLocation();
+    if (here) return here;
+
     return "en";
   }
 
