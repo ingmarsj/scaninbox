@@ -52,18 +52,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Salikt statisko lapu
-        run: |
-          mkdir -p _site
-          cp index.html _site/index.html
-          # Bez šī Jekyll apstrādātu failus un izlaistu tos, kas sākas ar _
-          touch _site/.nojekyll
-
+      # Jāizpilda PIRMS būves, jo no tā nāk base_url, ko lapa liek canonical
+      # un hreflang saitēs.
+      #
       # Pages avots ir jāieslēdz vienu reizi ar roku:
       # Settings -> Pages -> Source: GitHub Actions.
       # `enablement: true` šeit nepalīdz — noklusējuma GITHUB_TOKEN nedrīkst
       # izveidot Pages vietni ("Resource not accessible by integration").
-      - uses: actions/configure-pages@v5
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Salikt statisko lapu
+        env:
+          # Kur publicētā lapa sūta pieteikumus. Pages ir statisks hostings —
+          # tur API nav, tāpēc bez šī mainīgā forma godīgi saka, ka pieteikumus
+          # nesaglabā. Uzstādi: Settings -> Secrets and variables -> Actions ->
+          # Variables -> SCANINBOX_API = https://<hosts>/api/leads
+          # Tajā serverī jābūt SCANINBOX_ALLOW_ORIGIN ar šīs lapas izcelsmi.
+          SCANINBOX_API: ${{ vars.SCANINBOX_API }}
+          # Lapas sakne canonical un hreflang saitēm. Nāk no paša Pages,
+          # tāpēc nekas nav jāuzstāda ar roku.
+          SITE_URL: ${{ steps.pages.outputs.base_url }}
+        run: |
+          node .github/build-site.js
+          # Bez šī Jekyll apstrādātu failus un izlaistu tos, kas sākas ar _
+          touch _site/.nojekyll
 
       - uses: actions/upload-pages-artifact@v3
         with:

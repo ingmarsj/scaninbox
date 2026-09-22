@@ -11,3 +11,6 @@ desktop.ini
 .vscode/
 node_modules/
 *.log
+
+# Pages build izvade — atjauno ar .github/build-site.js
+_site/

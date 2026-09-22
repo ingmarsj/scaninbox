@@ -42,26 +42,50 @@ Kas mainījies pēc 8. septembra pārskatīšanas ar komandu:
 
 <https://ingmarsj.github.io/scaninbox/>
 
-Valodu var uzspiest ar `?lang=` — `…/scaninbox/?lang=it`, `?lang=fr`,
-`?lang=de`, `?lang=en`, `?lang=lv`. Tas ir arī veids, kā katra reklāmas
-kampaņa ved uz savu valodu. Bez parametra lapa valodu nosaka pēc apmeklētāja
-atrašanās vietas (laika joslas) un atceras, ko cilvēks izvēlējies pats —
-sīkāk sadaļā «Lapas uzbūve».
+Katrai valodai ir sava adrese, un tur ved reklāmas kampaņas:
+
+| | |
+| --- | --- |
+| <https://ingmarsj.github.io/scaninbox/lv/> | latviski |
+| <https://ingmarsj.github.io/scaninbox/en/> | angliski |
+| <https://ingmarsj.github.io/scaninbox/it/> | itāliski |
+| <https://ingmarsj.github.io/scaninbox/fr/> | franciski |
+| <https://ingmarsj.github.io/scaninbox/de/> | vāciski |
+
+Sakne pāradresē uz valodu pēc sīkdatnes, laika joslas vai pārlūka. Lapa, kas
+jau nosaukta savā valodā, nekad netiek pāradresēta prom no tā, kas prasīts.
+Vecais `?lang=` joprojām strādā, lai jau izsūtītās saites nepārtrūktu.
 
 Šo saiti var sūtīt kolēģiem pārskatīšanai. Ņem vērā divas lietas:
 
-- **Forma tur neko nesaglabā.** Pages ir statisks hostings bez API, tāpēc lapa
-  parāda «Šī ir priekšskatījuma kopija — pieteikumus tā nesaglabā». Reālu
-  pieteikumu vākšanai vajag vietu, kur darbojas `server.js`.
+- **Forma tur neko nesaglabā**, kamēr nav uzstādīts `SCANINBOX_API` — sīkāk
+  zemāk, «Priekšskatījuma režīms». Reālu pieteikumu vākšanai vajag vietu, kur
+  darbojas `server.js`.
 - **Lapa ir publiski sasniedzama** ikvienam, kam ir saite. Piekļuves kontrole
   Pages lapām ir tikai GitHub Enterprise Cloud. Meklētājos tā nenonāk, jo
   `index.html` nes `noindex, nofollow` — to noņem pirms palaišanas.
 
-Publicē CI darbplūsma no `main` zara. Uz Pages aiziet tikai `index.html`.
+Publicē CI darbplūsma no `main` zara: `.github/build-site.js` no viena
+`index.html` saliek sešas lapas — sakni un piecas valodas.
 
 > Pages avots ir jāieslēdz **vienu reizi** ar roku: Settings → Pages →
 > Source: **GitHub Actions**. Darbplūsma to nevar izdarīt pati — noklusējuma
 > `GITHUB_TOKEN` drīkst publicēt uz Pages, bet ne izveidot vietni.
+
+### Priekšskatījuma režīms
+
+Pages ir statisks hostings, tāpēc tur API nav. Lapa to pamana pati: ja
+`/api/leads` atbild ar 404, forma **iziet cauri līdz galam** — parāda
+apstiprinājumu un papildjautājumus —, bet neko nesūta un rindā zem formas
+godīgi saka «Šī ir priekšskatījuma versija — adrese netika saglabāta».
+Papildjautājumu atbildes tādā režīmā nekur neaiziet.
+
+Tas attiecas **tikai** uz 404 un 405. Pārtrūcis savienojums joprojām ir kļūda
+ar iespēju mēģināt vēlreiz — citādi cilvēks vilcienā ar sliktu signālu
+dabūtu «paldies» un pazustu.
+
+Tiklīdz ir īsts API un `SCANINBOX_API` ir uzstādīts, lapa saglabā, un
+priekšskatījuma rinda pazūd pati.
 
 ## Prasības
 
@@ -94,6 +118,7 @@ katrā startā — tā ir idempotenta, tāpēc migrācijas nav vajadzīgas.
 | `leads.js` | Pieteikumu atskaite terminālī. |
 | `test/` | Testi. `node --test`. |
 | `build-artifact.ps1` | Ģenerē `dist/artifact.html` priekšskatīšanai kā Claude Artifact. |
+| `.github/build-site.js` | Saliek `_site`: sakne plus pa lapai katrai valodai. |
 | `data/` | SQLite datubāze. **Nav git repozitorijā** — tie ir dati, ne kods. |
 
 ## Pieteikumu apskate
@@ -264,23 +289,36 @@ Otras tulkojumu glabātavas nav.
 
 Valodu izvēlas šādā secībā:
 
-1. `?lang=` parametrs — tur ved reklāmas kampaņas;
-2. paša cilvēka izvēle no slēdža, `localStorage`;
-3. **atrašanās vieta** — laika josla (`Europe/Rome` → itāļu, `Europe/Paris` →
+1. **adrese** — `/de/`, `/it/` un tā tālāk. Saite uz `/de/` ir solījums par
+   to, ko cilvēks ieraudzīs, tāpēc to nepārspēj ne sīkdatne, ne nekas cits;
+2. `?lang=` parametrs — to nes vecās, jau izsūtītās saites;
+3. paša cilvēka izvēle no slēdža, **sīkdatnē** `scaninbox_lang` (gads, ceļš
+   ierobežots ar pašas lapas sakni, `SameSite=Lax`);
+4. **atrašanās vieta** — laika josla (`Europe/Rome` → itāļu, `Europe/Paris` →
    franču, `Europe/Berlin` un `Europe/Vienna` → vācu, `Europe/Riga` →
    latviešu). Valstīs, kur der vairākas mūsu valodas — Šveice, Beļģija,
    Luksemburga — izšķir pārlūka valoda;
-4. pārlūka valoda;
-5. angļu.
+5. pārlūka valoda;
+6. angļu.
+
+Publicētajā versijā katrai valodai ir sava lapa, un tās saliek
+`.github/build-site.js`. Slēdzis tad nevis maina tekstu uz vietas, bet
+pārved uz citu adresi, un saknes lapa pāradresē pēc 3.–6. punkta. Lokālajā
+failā valodu ceļu nav, tāpēc tur slēdzis maina tekstu turpat un
+pāradresācijas nenotiek — viens fails, kas strādā abos režīmos.
+
+Sīkdatne, nevis `localStorage`, jo tā ir nolasāma visos valodu ceļos un vēlāk
+arī servera pusē. Tā ir funkcionāla sīkdatne, ko uzstāda tikai pēc cilvēka
+paša izvēles, tāpēc piekrišanas logs tai nav vajadzīgs.
 
 Laika josla ir vienīgais atrašanās vietas signāls, ko lapa var nolasīt **bez
 atļaujas prasīšanas, bez pieprasījuma uz svešu serveri un neaiztiekot IP
 adresi** — pēdējais ir svarīgi, jo pie formas mēs apsolām IP neglabāt. Pārlūks
 Romā ziņo `Europe/Rome` neatkarīgi no tā, kādā valodā ir tā izvēlnes.
 
-`localStorage` glabā **tikai** to valodu, ko cilvēks izvēlējies pats. Ja tur
-liktu arī automātiski noteikto, pirmais minējums iesaldētos uz visiem laikiem
-un lapa vairs nekad nepaskatītos, kur cilvēks atrodas.
+Sīkdatnē nonāk **tikai** tā valoda, ko cilvēks izvēlējies pats. Ja tur liktu
+arī automātiski noteikto, pirmais minējums iesaldētos uz visiem laikiem un lapa
+vairs nekad nepaskatītos, kur cilvēks atrodas.
 
 Krāsas un tipogrāfija nāk no CSS mainīgajiem `:root` blokā. Tumšais režīms
 pārdefinē tikai mainīgos, tāpēc jaunus komponentus var likt klāt, nedomājot
