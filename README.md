@@ -119,6 +119,9 @@ katrā startā — tā ir idempotenta, tāpēc migrācijas nav vajadzīgas.
 | `test/` | Testi. `node --test`. |
 | `build-artifact.ps1` | Ģenerē `dist/artifact.html` priekšskatīšanai kā Claude Artifact. |
 | `.github/build-site.js` | Saliek `_site`: sakne plus pa lapai katrai valodai. |
+| `i18n/` | Tulkojumi. `lv.json` ir ģenerēts, pārējie četri — avots. |
+| `tools/i18n.js` | Tekstu izvilkšana, iemontēšana un parītātes pārbaude. |
+| `CLAUDE.md` | Konteksts Claude Code sesijai: lēmumi, iemesli, slazdi. |
 | `data/` | SQLite datubāze. **Nav git repozitorijā** — tie ir dati, ne kods. |
 
 ## Pieteikumu apskate
@@ -287,19 +290,40 @@ nav sava elementa, uz kura sēdēt, tāpēc latviešu oriģināli ir `MSG_LV` ka
 skripta iekšā, bet pārējās valodas — tajā pašā vārdnīcā ar `msg.` priedēkli.
 Otras tulkojumu glabātavas nav.
 
+Mainot tekstu:
+
+```powershell
+node tools/i18n.js extract      # atjauno i18n/lv.json no lapas
+git diff i18n/lv.json           # redzi, kuras atslēgas jātulko
+# izlabo tās pašas atslēgas i18n/en|it|fr|de.json
+node tools/i18n.js merge        # ieliek vārdnīcas atpakaļ lapā
+```
+
+`i18n/lv.json` ir **ģenerēts** — to raksta `extract`, nevis cilvēks. Ja tulkojums
+aizmirstas, `merge` par to pasaka, tests krīt, un lapā tā vieta paliek latviski,
+nevis tukša.
+
 Valodu izvēlas šādā secībā:
 
 1. **adrese** — `/de/`, `/it/` un tā tālāk. Saite uz `/de/` ir solījums par
    to, ko cilvēks ieraudzīs, tāpēc to nepārspēj ne sīkdatne, ne nekas cits;
 2. `?lang=` parametrs — to nes vecās, jau izsūtītās saites;
 3. paša cilvēka izvēle no slēdža, **sīkdatnē** `scaninbox_lang` (gads, ceļš
-   ierobežots ar pašas lapas sakni, `SameSite=Lax`);
-4. **atrašanās vieta** — laika josla (`Europe/Rome` → itāļu, `Europe/Paris` →
+   ierobežots ar pašas lapas sakni, `SameSite=Lax`). Kad tā ir, pārlūkam
+   vairs neprasa;
+4. **pārlūka valoda** — cilvēks, kura dators runā vāciski, lasa vāciski
+   neatkarīgi no tā, kur viņš tobrīd atrodas;
+5. **atrašanās vieta** — laika josla (`Europe/Rome` → itāļu, `Europe/Paris` →
    franču, `Europe/Berlin` un `Europe/Vienna` → vācu, `Europe/Riga` →
-   latviešu). Valstīs, kur der vairākas mūsu valodas — Šveice, Beļģija,
-   Luksemburga — izšķir pārlūka valoda;
-5. pārlūka valoda;
+   latviešu). Tā ir tikai rezerve valodām, kuru mums nav: spāņu pārlūkam Romā
+   itāļu der labāk nekā angļu. Valstīs, kur der vairākas mūsu valodas —
+   Šveice, Beļģija, Luksemburga — izšķir pārlūka valoda;
 6. angļu.
+
+Secība starp 4. un 5. punktu ir reklāmas dēļ: laika josla pirms pārlūka
+nozīmētu, ka **Latvijā visi dabū latviešu valodu**, arī tie, kuru pārlūks to
+nekad nav prasījis, un vācietis bez `?lang=` saitē dabūtu nejaušu valodu, nevis
+vācu.
 
 Publicētajā versijā katrai valodai ir sava lapa, un tās saliek
 `.github/build-site.js`. Slēdzis tad nevis maina tekstu uz vietas, bet
@@ -313,8 +337,7 @@ paša izvēles, tāpēc piekrišanas logs tai nav vajadzīgs.
 
 Laika josla ir vienīgais atrašanās vietas signāls, ko lapa var nolasīt **bez
 atļaujas prasīšanas, bez pieprasījuma uz svešu serveri un neaiztiekot IP
-adresi** — pēdējais ir svarīgi, jo pie formas mēs apsolām IP neglabāt. Pārlūks
-Romā ziņo `Europe/Rome` neatkarīgi no tā, kādā valodā ir tā izvēlnes.
+adresi** — pēdējais ir svarīgi, jo pie formas mēs apsolām IP neglabāt.
 
 Sīkdatnē nonāk **tikai** tā valoda, ko cilvēks izvēlējies pats. Ja tur liktu
 arī automātiski noteikto, pirmais minējums iesaldētos uz visiem laikiem un lapa

@@ -199,3 +199,20 @@ describe('skati', () => {
     assert.match(rows[0].model, /canon mf445dw/i);
   });
 });
+
+/* Tulkojumi nav kods, bet tie lūst tikpat klusi: iztrūkstoša atslēga parādās
+   kā latviešu teikums vācu lapā, un cits marķējums — kā salauzts izkārtojums.
+   Rīks to zina; šis tests to tikai piesien pie `node --test`. */
+describe('tulkojumi', () => {
+  test('visās valodās ir tās pašas atslēgas un tas pats marķējums', () => {
+    const { execFileSync } = require('node:child_process');
+    const tool = require('node:path').join(__dirname, '..', 'tools', 'i18n.js');
+    let out = '';
+    try {
+      out = execFileSync(process.execPath, [tool, 'check'], { encoding: 'utf8' });
+    } catch (err) {
+      assert.fail('tools/i18n.js check:\n' + (err.stderr || err.stdout || err.message));
+    }
+    assert.match(out, /Viss sakrīt/);
+  });
+});
